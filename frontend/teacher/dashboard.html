@@ -15,6 +15,7 @@
         <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
         <nav>
             <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="approvals.html"><span class="ico">📋</span> Student Approvals <span id="navApprovalBadge" style="display:none;background:#f59e0b;color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></a>
             <a href="subjects.html"><span class="ico">📚</span> My Subjects</a>
             <a href="mark-attendance.html"><span class="ico">✅</span> Mark Attendance</a>
             <a href="attendance-history.html"><span class="ico">🕘</span> History & Reports</a>
@@ -32,11 +33,12 @@
         </div>
 
         <div class="content">
-            <div class="pct-card" style="margin-bottom:26px">
-                <div class="avatar" style="width:70px;height:70px;font-size:1.6rem;background:linear-gradient(135deg,#0d9488,#06b6d4)">🧑‍🏫</div>
-                <div>
+            <div class="pct-card" style="margin-bottom:26px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+                <div id="teacherProfilePicContainer"></div>
+                <div style="flex:1;min-width:200px">
                     <h2 id="teacherName">—</h2>
                     <p class="muted" id="deptInfo">—</p>
+                    <p class="muted" id="teacherEmail" style="font-size:0.85rem;margin-top:4px"></p>
                 </div>
             </div>
 
@@ -49,17 +51,31 @@
                 <div class="stat c-success">
                     <div class="ico">🧑‍🎓</div>
                     <div class="val" id="statStudents">0</div>
-                    <div class="lbl">Students (total)</div>
+                    <div class="lbl">Approved Students</div>
                 </div>
                 <div class="stat c-warning">
-                    <div class="ico">✅</div>
-                    <div class="val">—</div>
-                    <div class="lbl">Quick Mark</div>
+                    <div class="ico">⏳</div>
+                    <div class="val" id="statPendingApprovals">0</div>
+                    <div class="lbl">Pending Approvals</div>
                 </div>
                 <div class="stat c-danger">
                     <div class="ico">🕘</div>
-                    <div class="val">—</div>
+                    <div class="val" id="statReportsCount">—</div>
                     <div class="lbl">Reports</div>
+                </div>
+            </div>
+
+            <!-- Pending Approvals Widget -->
+            <div class="panel" style="margin-top:0;margin-bottom:26px">
+                <div class="panel-head">
+                    <div>
+                        <h3>Pending Student Approvals</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Students requesting enrollment in your assigned subjects</p>
+                    </div>
+                    <a class="btn btn-ghost btn-sm" href="approvals.html">Manage all approvals →</a>
+                </div>
+                <div class="panel-body" id="pendingApprovalsList">
+                    <p class="muted">Loading pending requests…</p>
                 </div>
             </div>
 

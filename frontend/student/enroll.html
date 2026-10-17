@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enroll in Subjects – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/student.css" />
+</head>
+<body data-page="enroll">
+<div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="enroll.html" class="active"><span class="ico">📝</span> Enroll Subjects</a>
+            <a href="attendance.html"><span class="ico">📅</span> Date-wise</a>
+            <a href="subject-attendance.html"><span class="ico">📚</span> Subject-wise</a>
+            <a href="monthly-attendance.html"><span class="ico">📈</span> Monthly</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Subject Enrollment & Teacher Approval</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">S</span> <span id="userName">student</span></div>
+        </div>
+
+        <div class="content">
+            <!-- Branch Banner -->
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                <div>
+                    <h3 style="color:#1e40af;margin-bottom:4px;font-size:1.05rem">🎓 Branch Enrollment Policy</h3>
+                    <p style="color:#1e3a8a;font-size:0.9rem">
+                        You are enrolled as <strong id="studentInfoText">Loading student profile…</strong>.
+                        According to institutional policy, <strong>students can ONLY enroll in subjects belonging to their own branch</strong>.
+                        Every request is sent directly to the respective subject teacher for approval.
+                    </p>
+                </div>
+                <div>
+                    <span class="badge badge-branch" id="branchBadge" style="font-size:0.9rem;padding:6px 14px">—</span>
+                </div>
+            </div>
+
+            <div class="alert" id="alertBox"></div>
+
+            <!-- Subject Cards Container -->
+            <div class="panel">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <h3>Available Subjects</h3>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-sm btn-ghost" id="filterMyBranchBtn" style="font-weight:700">My Branch Only</button>
+                        <button class="btn btn-sm btn-ghost" id="filterAllBtn">All Subjects</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="grid grid-3" id="availableSubjectCards">
+                        <p class="muted">Loading subjects…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/student.js"></script>
+</body>
+</html>

@@ -22,19 +22,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     markActiveNav();
-
-    const nameEl = document.getElementById("userName");
-
-    if (nameEl) {
-        nameEl.textContent = user.username || "Student";
-    }
+    renderTopBarUser(user);
 
     const page = document.body.dataset.page;
 
     try {
 
         if (page === "dashboard") {
-            await loadDashboard();
+            await loadDashboard(user);
+        }
+
+        if (page === "enroll") {
+            await loadEnrollPage();
         }
 
         if (page === "attendance") {
@@ -64,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    STUDENT DASHBOARD
    ============================================================ */
 
-async function loadDashboard() {
+async function loadDashboard(currentUser) {
 
     const d = await api("/api/students/dashboard");
 
@@ -128,6 +127,21 @@ async function loadDashboard() {
         courseEl.textContent =
             `${course} • ${branch} • Semester ${semester}`;
     }
+
+    /* --------------------------------------------------------
+       Setup Profile Picture Manager
+       -------------------------------------------------------- */
+    setupProfilePicManager({
+        containerId: "profilePicContainer",
+        fallbackInitial: (studentName || "S").charAt(0).toUpperCase(),
+        currentPic: student.profile_pic,
+        onUpdate: (newPic) => {
+            if (currentUser) {
+                currentUser.profile_pic = newPic;
+                renderTopBarUser(currentUser);
+            }
+        }
+    });
 
 
     /* --------------------------------------------------------
@@ -394,7 +408,206 @@ async function loadDashboard() {
             `;
 
         }).join("");
+
+    /* --------------------------------------------------------
+       Subject Approvals & Enrollments
+       -------------------------------------------------------- */
+    const enrollBox = document.getElementById("enrollmentList");
+    if (enrollBox) {
+        const enrollments = d.enrollments || [];
+        if (!enrollments.length) {
+            enrollBox.innerHTML = `
+                <div style="text-align:center;padding:24px 10px">
+                    <p class="muted" style="margin-bottom:12px">You have not enrolled in any subjects yet.</p>
+                    <a href="enroll.html" class="btn btn-primary btn-sm" style="text-decoration:none">
+                        Browse & Enroll in Subjects →
+                    </a>
+                </div>
+            `;
+        } else {
+            enrollBox.innerHTML = `
+                <div style="overflow-x:auto">
+                    <table class="table" style="width:100%;text-align:left;border-collapse:collapse">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--line);color:var(--muted);font-size:0.85rem">
+                                <th style="padding:10px">Subject Code</th>
+                                <th style="padding:10px">Subject Name</th>
+                                <th style="padding:10px">Branch</th>
+                                <th style="padding:10px">Subject Teacher</th>
+                                <th style="padding:10px">Approval Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${enrollments.map(e => {
+                                let badgeHtml = '';
+                                if (e.status === 'approved') {
+                                    badgeHtml = '<span class="badge badge-approved">✅ Approved & Enrolled</span>';
+                                } else if (e.status === 'pending') {
+                                    badgeHtml = '<span class="badge badge-pending">⏳ Pending Approval</span>';
+                                } else {
+                                    badgeHtml = `<span class="badge badge-rejected">❌ Rejected</span> <a href="enroll.html" style="font-size:0.8rem;margin-left:6px;font-weight:600">Re-apply</a>`;
+                                }
+                                return `
+                                    <tr style="border-bottom:1px solid var(--line);font-size:0.9rem">
+                                        <td style="padding:10px"><b>${esc(e.subject_code)}</b></td>
+                                        <td style="padding:10px">${esc(e.subject_name)}</td>
+                                        <td style="padding:10px"><span class="badge badge-branch">${esc(e.branch || '-')}</span></td>
+                                        <td style="padding:10px">${esc(e.teacher_name || 'Subject Teacher')}</td>
+                                        <td style="padding:10px">${badgeHtml}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+    }
 }
+
+
+/* ============================================================
+   STUDENT ENROLLMENT PAGE (BRANCH RESTRICTED)
+   ============================================================ */
+
+async function loadEnrollPage() {
+    const cardsContainer = document.getElementById("availableSubjectCards");
+    const alertBox = document.getElementById("alertBox");
+
+    try {
+        const data = await api("/api/students/available-subjects");
+        if (!data || !data.success) {
+            if (cardsContainer) cardsContainer.innerHTML = `<p class="muted">Failed to load available subjects.</p>`;
+            return;
+        }
+
+        const branch = data.student_branch || "N/A";
+        const course = data.student_course || "Course";
+
+        const badgeEl = document.getElementById("branchBadge");
+        if (badgeEl) badgeEl.textContent = `Branch: ${branch}`;
+
+        const infoEl = document.getElementById("studentInfoText");
+        if (infoEl) infoEl.textContent = `${course} (${branch})`;
+
+        let subjects = data.subjects || [];
+        let showAll = false;
+
+        const filterMyBranchBtn = document.getElementById("filterMyBranchBtn");
+        const filterAllBtn = document.getElementById("filterAllBtn");
+
+        function renderCards() {
+            const listToRender = showAll ? subjects : subjects.filter(s => s.is_my_branch);
+            if (!listToRender.length) {
+                cardsContainer.innerHTML = `<p class="muted" style="padding:20px 0">No subjects found for ${showAll ? "this campus" : "your branch (" + esc(branch) + ")"}.</p>`;
+                return;
+            }
+
+            cardsContainer.innerHTML = listToRender.map(sub => {
+                let statusBlock = "";
+                if (!sub.is_my_branch) {
+                    statusBlock = `
+                        <div style="margin-top:14px;background:#fff1f2;padding:10px;border-radius:8px">
+                            <span class="badge badge-rejected" style="font-size:0.75rem">⚠️ Other Branch (${esc(sub.branch)})</span>
+                            <p style="font-size:0.8rem;color:#b91c1c;margin-top:6px;font-weight:600">Cross-branch enrollment not permitted</p>
+                            <button class="btn btn-sm" disabled style="opacity:0.5;cursor:not-allowed;width:100%;margin-top:6px">🚫 Ineligible</button>
+                        </div>
+                    `;
+                } else if (sub.enrollment_status === "approved") {
+                    statusBlock = `
+                        <div style="margin-top:14px">
+                            <span class="badge badge-approved" style="font-size:0.85rem">✅ Enrolled & Approved</span>
+                            <p style="font-size:0.8rem;color:var(--muted);margin-top:6px">🧑‍🏫 Teacher: <b>${esc(sub.teacher_names)}</b></p>
+                        </div>
+                    `;
+                } else if (sub.enrollment_status === "pending") {
+                    statusBlock = `
+                        <div style="margin-top:14px;background:#fefce8;padding:10px;border-radius:8px;border:1px solid #fef08a">
+                            <span class="badge badge-pending">⏳ Pending Approval</span>
+                            <p style="font-size:0.8rem;color:#854d0e;margin-top:6px">
+                                Request sent to <b>${esc(sub.teacher_names)}</b>. Awaiting review.
+                            </p>
+                        </div>
+                    `;
+                } else if (sub.enrollment_status === "rejected") {
+                    statusBlock = `
+                        <div style="margin-top:14px">
+                            <span class="badge badge-rejected">❌ Rejected</span>
+                            <div style="margin-top:8px">
+                                <button class="btn btn-sm btn-primary" onclick="requestEnroll(${sub.id})" style="width:100%">
+                                    🔄 Re-apply for Enrollment
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    statusBlock = `
+                        <div style="margin-top:14px">
+                            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:8px">🧑‍🏫 Subject Teacher: <b>${esc(sub.teacher_names)}</b></p>
+                            <button class="btn btn-sm btn-primary" onclick="requestEnroll(${sub.id})" style="width:100%">
+                                ➕ Request Enrollment
+                            </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="panel" style="margin-top:0;display:flex;flex-direction:column;justify-content:space-between;border:${sub.is_my_branch ? '1px solid var(--line)' : '1px dashed #cbd5e1'};background:${sub.is_my_branch ? '#fff' : '#f8fafc'}">
+                        <div>
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                                <span style="font-weight:800;color:var(--primary);font-size:1.15rem">${esc(sub.subject_code)}</span>
+                                <span class="badge ${sub.is_my_branch ? 'badge-branch' : ''}">${esc(sub.branch)}</span>
+                            </div>
+                            <h4 style="margin:10px 0 6px;font-size:1.05rem">${esc(sub.subject_name)}</h4>
+                            <p class="muted" style="font-size:0.85rem">${esc(sub.course)} • Semester ${esc(sub.semester)}</p>
+                        </div>
+                        ${statusBlock}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        if (filterMyBranchBtn && filterAllBtn) {
+            filterMyBranchBtn.onclick = () => {
+                showAll = false;
+                filterMyBranchBtn.style.fontWeight = "700";
+                filterMyBranchBtn.style.color = "var(--primary)";
+                filterAllBtn.style.fontWeight = "400";
+                filterAllBtn.style.color = "inherit";
+                renderCards();
+            };
+            filterAllBtn.onclick = () => {
+                showAll = true;
+                filterMyBranchBtn.style.fontWeight = "400";
+                filterMyBranchBtn.style.color = "inherit";
+                filterAllBtn.style.fontWeight = "700";
+                filterAllBtn.style.color = "var(--primary)";
+                renderCards();
+            };
+        }
+
+        renderCards();
+
+    } catch (err) {
+        console.error("loadEnrollPage error:", err);
+        if (cardsContainer) cardsContainer.innerHTML = `<p class="muted">Failed to load subjects: ${esc(err.message)}</p>`;
+    }
+}
+
+async function requestEnroll(subjectId) {
+    const alertBox = document.getElementById("alertBox");
+    try {
+        const res = await api("/api/students/enroll", {
+            method: "POST",
+            body: { subject_id: subjectId }
+        });
+        if (alertBox) showAlert(alertBox, res.message || "Enrollment request submitted to the subject teacher!", "success");
+        await loadEnrollPage();
+    } catch (err) {
+        if (alertBox) showAlert(alertBox, err.message, "error");
+    }
+}
+
 
 
 /* ============================================================

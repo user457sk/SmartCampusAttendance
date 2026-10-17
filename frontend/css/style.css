@@ -210,3 +210,48 @@ tbody tr:hover { background: #f8fafc; }
     .footer-grid { grid-template-columns: 1fr; }
     .hero-stats { gap: 22px; }
 }
+
+/* ---------------- Avatars & Profile Picture ---------------- */
+.topbar .avatar-img {
+    width: 38px; height: 38px; border-radius: 50%; object-fit: cover; display: block;
+}
+.avatar-wrap {
+    position: relative; display: inline-block;
+}
+.avatar-profile-box {
+    display: flex; align-items: center; gap: 20px;
+}
+.avatar-interactive {
+    position: relative; width: 80px; height: 80px; border-radius: 50%;
+    background: #e2e8f0; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; border: 3px solid #fff; box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+.avatar-interactive img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.avatar-interactive .avatar-fallback {
+    font-size: 2rem; font-weight: 700; color: #475569;
+}
+.avatar-actions-bar {
+    display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center;
+}
+.btn-avatar {
+    font-size: 0.78rem; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: #fff; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px; transition: all .15s;
+}
+.btn-avatar:hover { background: #f8fafc; border-color: #cbd5e1; }
+.btn-avatar-danger { color: #dc2626; border-color: #fecaca; }
+.btn-avatar-danger:hover { background: #fee2e2; }
+
+/* ---------------- Badges ---------------- */
+.badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px;
+    border-radius: 9999px; font-size: 0.75rem; font-weight: 700;
+}
+.badge-pending { background: #fef3c7; color: #b45309; }
+.badge-approved { background: #dcfce7; color: #15803d; }
+.badge-rejected { background: #fee2e2; color: #b91c1c; }
+.badge-branch { background: #e0f2fe; color: #0369a1; }
+

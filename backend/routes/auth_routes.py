@@ -51,19 +51,34 @@ def register():
     # ---- create the matching profile -------------------------------
     try:
         if role == "student":
-            roll = (data.get("roll_number") or "").strip()
+            roll = (data.get("roll_number") or "").strip().upper()
             full_name = (data.get("full_name") or "").strip()
             course = (data.get("course") or "").strip()
-            branch = (data.get("branch") or "").strip()
+            branch = (data.get("branch") or "").strip().upper()
             semester = int(data.get("semester") or 1)
             if not roll or not full_name or not course or not branch:
                 raise ValueError("Roll number, name, course and branch are required.")
-            if student_model.get_student_by_roll(roll):
-                raise ValueError("That roll number is already registered.")
-            student_model.create_student_profile(
-                user_id, roll, full_name, course, branch, semester,
-                (data.get("phone") or "").strip(),
-            )
+
+            existing_student = student_model.get_student_by_roll(roll)
+            if existing_student:
+                if existing_student.get("user_id"):
+                    raise ValueError(f"Roll number '{roll}' is already registered with an active account.")
+                # Link newly created user account to the existing placeholder profile created by teacher!
+                # All past attendance records and approved enrollments are instantly available!
+                student_model.link_student_user(
+                    student_id=existing_student["id"],
+                    user_id=user_id,
+                    full_name=full_name,
+                    course=course,
+                    branch=branch,
+                    semester=semester,
+                    phone=(data.get("phone") or "").strip()
+                )
+            else:
+                student_model.create_student_profile(
+                    user_id, roll, full_name, course, branch, semester,
+                    (data.get("phone") or "").strip(),
+                )
         else:
             full_name = (data.get("full_name") or "").strip()
             department = (data.get("department") or "").strip()
@@ -94,13 +109,19 @@ def login():
     if not user or not verify_password(password, user["password_hash"]):
         return jsonify({"error": "Invalid username or password."}), 401
 
+    redirect_url = "/student/dashboard.html"
+    if user["role"] == "admin":
+        redirect_url = "/admin/dashboard.html"
+    elif user["role"] == "teacher":
+        redirect_url = "/teacher/dashboard.html"
+
     login_user(user)
     return jsonify({
         "message": "Login successful.",
         "role": user["role"],
         "username": user["username"],
-        "redirect": "/teacher/dashboard.html" if user["role"] == "teacher"
-                    else "/student/dashboard.html",
+        "profile_pic": user.get("profile_pic"),
+        "redirect": redirect_url,
     })
 
 
@@ -117,4 +138,11 @@ def me():
     if not user:
         logout_user()
         return jsonify({"error": "Session invalid."}), 401
-    return jsonify({"id": user["id"], "username": user["username"], "role": user["role"]})
+    return jsonify({
+        "id": user["id"],
+        "username": user["username"],
+        "role": user["role"],
+        "email": user.get("email"),
+        "profile_pic": user.get("profile_pic"),
+    })
+

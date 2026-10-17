@@ -273,3 +273,38 @@ def teacher_owns_subject(
     )
 
     return bool(row)
+
+
+def list_subjects_by_branch(branch, course=None):
+    """Return all subjects offered for a specific branch."""
+    if course:
+        return query(
+            "SELECT * FROM subjects WHERE branch = ? AND course = ? ORDER BY subject_code",
+            (branch, course)
+        )
+    return query(
+        "SELECT * FROM subjects WHERE branch = ? ORDER BY subject_code",
+        (branch,)
+    )
+
+
+def get_subject_teachers(subject_id):
+    """Return teachers teaching this subject."""
+    return query(
+        """
+        SELECT t.id, t.full_name, t.department, t.employee_id, t.phone, u.email
+        FROM teachers t
+        JOIN users u ON u.id = t.user_id
+        JOIN teacher_subjects ts ON ts.teacher_id = t.id
+        WHERE ts.subject_id = ?
+        """,
+        (subject_id,)
+    )
+
+
+def delete_subject(subject_id):
+    """Delete subject and its related attendance, enrollments, and teacher assignments."""
+    execute("DELETE FROM attendance WHERE subject_id = ?", (subject_id,))
+    execute("DELETE FROM enrollments WHERE subject_id = ?", (subject_id,))
+    execute("DELETE FROM teacher_subjects WHERE subject_id = ?", (subject_id,))
+    return execute("DELETE FROM subjects WHERE id = ?", (subject_id,))

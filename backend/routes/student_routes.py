@@ -53,6 +53,7 @@ def get_current_student():
             u.username,
             u.email,
             u.role,
+            u.profile_pic,
 
             s.id AS student_id,
             s.roll_number,
@@ -338,6 +339,11 @@ def student_dashboard():
         })
 
 
+    from models import enrollment as enrollment_model
+    my_enrollments = enrollment_model.get_student_enrollments(student_id)
+    pending_count = sum(1 for e in my_enrollments if e.get("status") == "pending")
+    approved_count = sum(1 for e in my_enrollments if e.get("status") == "approved")
+
     # --------------------------------------------------------
     # RESPONSE
     # --------------------------------------------------------
@@ -356,6 +362,9 @@ def student_dashboard():
 
             "email":
                 student.get("email"),
+
+            "profile_pic":
+                student.get("profile_pic"),
 
             "student_id":
                 student.get("student_id"),
@@ -413,7 +422,16 @@ def student_dashboard():
             attendance_percentage,
 
         "subjects":
-            subjects
+            subjects,
+
+        "enrollments":
+            my_enrollments,
+
+        "pending_enrollments_count":
+            pending_count,
+
+        "approved_enrollments_count":
+            approved_count,
     })
 
 
@@ -731,3 +749,141 @@ def student_monthly_attendance():
 
 
     return jsonify(result)
+
+
+# ============================================================
+# AVAILABLE SUBJECTS FOR ENROLLMENT (BRANCH FILTERED)
+# ============================================================
+
+@student_bp.get("/available-subjects")
+def student_available_subjects():
+    student = get_current_student()
+    if not student:
+        return jsonify({"success": False, "error": "Student not logged in"}), 401
+
+    student_id = student.get("student_id")
+    student_branch = (student.get("branch") or "").strip()
+    student_course = (student.get("course") or "").strip()
+
+    from models import subject as subject_model
+    from models import enrollment as enrollment_model
+
+    all_subjects = subject_model.list_all_subjects()
+    my_enrollments = {
+        e["subject_id"]: e
+        for e in enrollment_model.get_student_enrollments(student_id)
+    }
+
+    results = []
+    for sub in all_subjects:
+        teachers = subject_model.get_subject_teachers(sub["id"])
+        teacher_names = ", ".join([t["full_name"] for t in teachers]) if teachers else "Unassigned"
+        enrollment = my_enrollments.get(sub["id"])
+        status = enrollment["status"] if enrollment else "not_enrolled"
+        is_my_branch = (sub.get("branch") or "").strip().upper() == student_branch.upper()
+
+        results.append({
+            "id": sub["id"],
+            "subject_code": sub["subject_code"],
+            "subject_name": sub["subject_name"],
+            "course": sub["course"],
+            "branch": sub["branch"],
+            "semester": sub["semester"],
+            "teacher_names": teacher_names,
+            "teachers": teachers,
+            "enrollment_status": status,
+            "enrollment_id": enrollment["id"] if enrollment else None,
+            "is_my_branch": is_my_branch,
+            "can_enroll": is_my_branch and status in ("not_enrolled", "rejected"),
+        })
+
+    return jsonify({
+        "success": True,
+        "student_branch": student_branch,
+        "student_course": student_course,
+        "subjects": results,
+    })
+
+
+# ============================================================
+# REQUEST SUBJECT ENROLLMENT (STRICT BRANCH CHECK)
+# ============================================================
+
+@student_bp.post("/enroll")
+def student_request_enrollment():
+    from flask import request
+    student = get_current_student()
+    if not student:
+        return jsonify({"success": False, "error": "Student not logged in"}), 401
+
+    student_id = student.get("student_id")
+    data = request.get_json(silent=True) or {}
+    subject_id = data.get("subject_id")
+
+    if not subject_id:
+        return jsonify({"success": False, "error": "Subject ID is required"}), 400
+
+    from models import subject as subject_model
+    from models import enrollment as enrollment_model
+
+    subject = subject_model.get_subject_by_id(subject_id)
+    if not subject:
+        return jsonify({"success": False, "error": "Subject not found"}), 404
+
+    # ---- Strict Branch Restriction Check ----
+    student_branch = (student.get("branch") or "").strip().upper()
+    subject_branch = (subject.get("branch") or "").strip().upper()
+
+    if student_branch != subject_branch:
+        return jsonify({
+            "success": False,
+            "error": f"Branch mismatch: As a '{student.get('branch')}' student, you are not allowed to enroll in a '{subject.get('branch')}' subject."
+        }), 403
+
+    # ---- Check Existing Enrollment ----
+    existing = enrollment_model.get_enrollment(student_id, subject_id)
+    teachers = subject_model.get_subject_teachers(subject_id)
+    teacher_name = ", ".join([t["full_name"] for t in teachers]) if teachers else "the subject teacher"
+
+    if existing:
+        if existing["status"] == "approved":
+            return jsonify({
+                "success": False,
+                "error": f"You are already approved and enrolled in {subject['subject_name']}."
+            }), 400
+        elif existing["status"] == "pending":
+            return jsonify({
+                "success": False,
+                "error": f"Your enrollment request for {subject['subject_name']} is already pending approval from {teacher_name}."
+            }), 400
+        elif existing["status"] == "rejected":
+            # Re-request enrollment
+            enrollment_model.update_enrollment_status(existing["id"], "pending")
+            return jsonify({
+                "success": True,
+                "message": f"Enrollment re-requested for {subject['subject_name']}. Sent to {teacher_name} for approval."
+            })
+
+    # New enrollment request
+    enrollment_model.create_enrollment(student_id, subject_id, status="pending")
+
+    return jsonify({
+        "success": True,
+        "message": f"Enrollment request submitted! Approval has been sent to {teacher_name}."
+    }), 201
+
+
+# ============================================================
+# MY ENROLLMENTS
+# ============================================================
+
+@student_bp.get("/enrollments")
+def student_enrollments_list():
+    student = get_current_student()
+    if not student:
+        return jsonify({"success": False, "error": "Student not logged in"}), 401
+
+    student_id = student.get("student_id")
+    from models import enrollment as enrollment_model
+    records = enrollment_model.get_student_enrollments(student_id)
+    return jsonify({"success": True, "enrollments": records})

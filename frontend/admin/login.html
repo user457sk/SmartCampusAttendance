@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login – SmartCampus Control Center</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/login.css" />
+    <style>
+        .auth-side { background: linear-gradient(150deg, #0f172a, #1e293b 45%, #334155); }
+        .auth-box h1 { color: #0f172a; }
+        .btn-admin { background: #0f172a; color: #fff; }
+        .btn-admin:hover { background: #1e293b; }
+        .btn-demo-autofill {
+            background: #f1f5f9; border: 1px dashed #94a3b8; color: #334155;
+            padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; cursor: pointer;
+            margin-top: 8px; font-weight: 600; display: inline-block;
+        }
+        .btn-demo-autofill:hover { background: #e2e8f0; color: #0f172a; }
+    </style>
+</head>
+<body>
+    <div class="auth-wrap">
+        <div class="auth-side">
+            <a class="brand" href="../index.html"><span class="logo">⚡</span> SmartAdmin</a>
+            <h2>Administrator Portal 🛡️</h2>
+            <p>Institutional control center for managing academic departments, subjects, faculty and students.</p>
+            <ul>
+                <li><i>✅</i> System-wide subjects & department control</li>
+                <li><i>✅</i> Create, assign and manage teachers & students</li>
+                <li><i>✅</i> Global enrollment approvals & policy enforcement</li>
+                <li><i>✅</i> Real-time institutional metrics & reports</li>
+            </ul>
+        </div>
+
+        <div class="auth-main">
+            <div class="auth-box">
+                <div class="logo-mobile"><span class="logo">⚡</span> Smart<span>Admin</span></div>
+                <h1>Administrator Sign In</h1>
+                <p class="sub">Enter your administrator credentials to access the control center.</p>
+
+                <div class="alert" id="alertBox"></div>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Admin Username</label>
+                        <input class="form-control" id="username" name="username" placeholder="e.g. admin" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input class="form-control" id="password" name="password" type="password" placeholder="••••••••" required />
+                    </div>
+                    <button class="btn btn-block btn-admin" type="submit">Access Control Center</button>
+                </form>
+
+                <p class="auth-footer">
+                    Switch portal: <a href="../login.html">Student Login</a> · <a href="../teacher/login.html">Teacher Login</a>
+                </p>
+
+                <div class="demo-note">
+                    <b>Admin Account:</b> <code>admin</code> / <code>admin123</code><br />
+                    <button type="button" class="btn-demo-autofill" onclick="autoFillAdmin()">⚡ Auto-fill Demo Admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/login.js"></script>
+    <script>
+        function autoFillAdmin() {
+            document.getElementById('username').value = 'admin';
+            document.getElementById('password').value = 'admin123';
+        }
+    </script>
+</body>
+</html>

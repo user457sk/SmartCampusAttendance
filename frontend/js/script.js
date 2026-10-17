@@ -89,3 +89,121 @@ function markActiveNav() {
         if (a.getAttribute("href") === here) a.classList.add("active");
     });
 }
+
+/* Render topbar user chip with username and profile picture */
+function renderTopBarUser(user) {
+    if (!user) return;
+    const nameEl = document.getElementById("userName");
+    if (nameEl) nameEl.textContent = user.username || "User";
+
+    const userChip = document.querySelector(".topbar .user-chip");
+    if (!userChip) return;
+
+    let avatarContainer = userChip.querySelector(".avatar, .avatar-img");
+    const initial = (user.username || "U").charAt(0).toUpperCase();
+
+    if (user.profile_pic) {
+        if (avatarContainer && avatarContainer.tagName === "IMG") {
+            avatarContainer.src = user.profile_pic;
+        } else if (avatarContainer) {
+            const img = document.createElement("img");
+            img.className = "avatar-img";
+            img.src = user.profile_pic;
+            img.alt = user.username || "Avatar";
+            avatarContainer.replaceWith(img);
+        }
+    } else {
+        if (avatarContainer && avatarContainer.tagName === "IMG") {
+            const span = document.createElement("span");
+            span.className = "avatar";
+            span.textContent = initial;
+            avatarContainer.replaceWith(span);
+        } else if (avatarContainer) {
+            avatarContainer.textContent = initial;
+        }
+    }
+}
+
+/* Profile picture management UI (Upload & Remove) */
+function setupProfilePicManager({ containerId, fallbackInitial = "U", currentPic = null, onUpdate = null }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    function render(pic) {
+        container.innerHTML = `
+            <div class="avatar-interactive" id="${containerId}_avatarBox">
+                ${pic ? `<img src="${pic}" alt="Profile Picture" id="${containerId}_img" />` : `<span class="avatar-fallback" id="${containerId}_txt">${esc(fallbackInitial)}</span>`}
+            </div>
+            <div>
+                <input type="file" id="${containerId}_fileInput" accept="image/*" style="display:none" />
+                <div class="avatar-actions-bar">
+                    <button type="button" class="btn-avatar" id="${containerId}_btnUpload">
+                        📷 ${pic ? "Change Photo" : "Upload Photo"}
+                    </button>
+                    ${pic ? `<button type="button" class="btn-avatar btn-avatar-danger" id="${containerId}_btnRemove">🗑️ Remove</button>` : ""}
+                </div>
+                <div id="${containerId}_msg" style="font-size:0.75rem;margin-top:4px;color:var(--muted)"></div>
+            </div>
+        `;
+
+        const fileInput = document.getElementById(`${containerId}_fileInput`);
+        const btnUpload = document.getElementById(`${containerId}_btnUpload`);
+        const btnRemove = document.getElementById(`${containerId}_btnRemove`);
+        const msgEl = document.getElementById(`${containerId}_msg`);
+
+        btnUpload.addEventListener("click", () => fileInput.click());
+
+        fileInput.addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            msgEl.textContent = "Uploading...";
+            msgEl.style.color = "var(--primary)";
+
+            const formData = new FormData();
+            formData.append("picture", file);
+
+            try {
+                const res = await fetch("/api/profile/picture", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    body: formData,
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Upload failed");
+
+                msgEl.textContent = "Photo updated successfully!";
+                msgEl.style.color = "var(--success)";
+                render(data.profile_pic);
+                if (typeof onUpdate === "function") onUpdate(data.profile_pic);
+            } catch (err) {
+                msgEl.textContent = err.message;
+                msgEl.style.color = "var(--danger)";
+            }
+        });
+
+        if (btnRemove) {
+            btnRemove.addEventListener("click", async () => {
+                if (!confirm("Are you sure you want to remove your profile picture?")) return;
+                msgEl.textContent = "Removing...";
+                try {
+                    const res = await fetch("/api/profile/picture", {
+                        method: "DELETE",
+                        credentials: "same-origin",
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Removal failed");
+
+                    msgEl.textContent = "Photo removed.";
+                    render(null);
+                    if (typeof onUpdate === "function") onUpdate(null);
+                } catch (err) {
+                    msgEl.textContent = err.message;
+                    msgEl.style.color = "var(--danger)";
+                }
+            });
+        }
+    }
+
+    render(currentPic);
+}
+

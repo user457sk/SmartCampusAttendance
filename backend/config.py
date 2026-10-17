@@ -1,124 +1,50 @@
-"""
-config.py
----------
-Central configuration for SmartCampus.
-
-This version is prepared for:
-- Local development
-- Supabase PostgreSQL
-- Production deployment
-- Secure environment variables
-"""
-
 import os
-
 from dotenv import load_dotenv
 
+# Project root directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# ------------------------------------------------------------
-# BASE DIRECTORY
-# ------------------------------------------------------------
-
-# SmartCampus/
-BASE_DIR = os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))
-)
-
-
-# ------------------------------------------------------------
-# LOAD .env FILE
-# ------------------------------------------------------------
-
-# .env is located in the SmartCampus root folder.
+# Load environment variables from project root
 ENV_FILE = os.path.join(BASE_DIR, ".env")
-
 load_dotenv(ENV_FILE)
 
+# Server
+PORT = int(os.environ.get("PORT", "5000"))
 
-# ------------------------------------------------------------
-# DATABASE
-# ------------------------------------------------------------
-
-# PostgreSQL / Supabase connection string.
-#
-# Example:
-# DATABASE_URL=postgresql://postgres:password@host:5432/postgres
-#
-# IMPORTANT:
-# Do not write the real password directly inside Python code.
-
+# Database
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
+# Database schema
+SCHEMA_PATH = os.path.join(BASE_DIR, "database", "database.sql")
 
-# ------------------------------------------------------------
-# DATABASE SCHEMA
-# ------------------------------------------------------------
+# Frontend
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+UPLOAD_DIR = os.path.join(FRONTEND_DIR, "uploads", "avatars")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-SCHEMA_PATH = os.path.join(
-    BASE_DIR,
-    "database",
-    "database.sql"
-)
-
-
-# ------------------------------------------------------------
-# FRONTEND
-# ------------------------------------------------------------
-
-FRONTEND_DIR = os.path.join(
-    BASE_DIR,
-    "frontend"
-)
-
-
-# ------------------------------------------------------------
-# SECRET KEY
-# ------------------------------------------------------------
-
+# Secret key
 SECRET_KEY = os.environ.get(
     "SMARTCAMPUS_SECRET",
     "smartcampus-dev-secret-change-me"
 )
 
-
-# ------------------------------------------------------------
-# SESSION
-# ------------------------------------------------------------
-
-# 8 hours
+# Session lifetime: 8 hours
 SESSION_LIFETIME = 60 * 60 * 8
 
-
-# ------------------------------------------------------------
-# ENVIRONMENT
-# ------------------------------------------------------------
-
+# Environment
 SMARTCAMPUS_ENV = os.environ.get(
-    "SMARTCAMPUS_ENV",
-    "development"
-).lower()
+    "SMARTCAMPUS_ENV", "development"
+).strip().lower()
 
+# Debug mode
+DEBUG = os.environ.get("DEBUG", "1").strip() == "1"
 
-# ------------------------------------------------------------
-# DEBUG
-# ------------------------------------------------------------
-
-DEBUG = os.environ.get(
-    "DEBUG",
-    "1"
-) == "1"
-
-
-# ------------------------------------------------------------
-# PRODUCTION CHECK
-# ------------------------------------------------------------
-
+# Production checks
 if SMARTCAMPUS_ENV == "production":
+    DEBUG = False
 
     if not DATABASE_URL:
-        raise RuntimeError(
-            "DATABASE_URL is not configured."
-        )
+        raise RuntimeError("DATABASE_URL is not configured.")
 
     if SECRET_KEY == "smartcampus-dev-secret-change-me":
         raise RuntimeError(

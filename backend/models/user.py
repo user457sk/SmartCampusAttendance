@@ -22,3 +22,12 @@ def get_user_by_email(email):
 
 def get_user_by_id(user_id):
     return query("SELECT * FROM users WHERE id = ?", (user_id,), one=True)
+
+
+def update_profile_pic(user_id, profile_pic_url):
+    return execute("UPDATE users SET profile_pic = ? WHERE id = ?", (profile_pic_url, user_id))
+
+
+def remove_profile_pic(user_id):
+    return execute("UPDATE users SET profile_pic = NULL WHERE id = ?", (user_id,))
+

@@ -58,6 +58,8 @@ from routes.auth_routes import auth_bp
 from routes.student_routes import student_bp
 from routes.teacher_routes import teacher_bp
 from routes.attendance_routes import attendance_bp
+from routes.profile_routes import profile_bp
+from routes.admin_routes import admin_bp
 
 
 # ============================================================
@@ -173,6 +175,26 @@ def create_app():
     app.register_blueprint(
         attendance_bp,
         url_prefix="/api/attendance",
+    )
+
+
+    # --------------------------------------------------------
+    # PROFILE PICTURE ROUTES
+    # --------------------------------------------------------
+
+    app.register_blueprint(
+        profile_bp,
+        url_prefix="/api/profile",
+    )
+
+
+    # --------------------------------------------------------
+    # ADMIN ROUTES
+    # --------------------------------------------------------
+
+    app.register_blueprint(
+        admin_bp,
+        url_prefix="/api/admin",
     )
 
 
@@ -293,61 +315,20 @@ app = create_app()
 # ============================================================
 
 def initialize_database():
-
     """
-    Initialize PostgreSQL / Supabase database.
-
-    init_db() uses Flask's `g` object,
-    therefore it must run inside app.app_context().
+    Initialize database (PostgreSQL / Supabase if available, SQLite fallback).
     """
-
-    if not DATABASE_URL:
-
-        print()
-        print(
-            "ERROR: DATABASE_URL is missing."
-        )
-
-        print(
-            "Please create SmartCampus/.env"
-        )
-
-        print(
-            "and add your Supabase PostgreSQL "
-            "connection string."
-        )
-
-        print()
-
-        return False
-
-
     try:
-
         with app.app_context():
-
             init_db()
 
-
-        print()
-        print(
-            "Database initialization successful."
-        )
-
+        print("\nDatabase initialization successful.\n")
         return True
 
-
     except Exception as error:
-
-        print()
-        print(
-            "Database initialization failed:"
-        )
-
+        print("\nDatabase initialization failed:")
         print(error)
-
         print()
-
         return False
 
 

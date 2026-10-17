@@ -16,6 +16,7 @@
         <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
         <nav>
             <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="enroll.html"><span class="ico">📝</span> Enroll Subjects</a>
             <a href="attendance.html"><span class="ico">📅</span> Date-wise</a>
             <a href="subject-attendance.html"><span class="ico">📚</span> Subject-wise</a>
             <a href="monthly-attendance.html"><span class="ico">📈</span> Monthly</a>
@@ -34,12 +35,13 @@
         </div>
 
         <div class="content">
-            <!-- Profile card -->
-            <div class="pct-card" style="margin-bottom:26px">
+            <!-- Profile card with profile picture manager -->
+            <div class="pct-card" style="margin-bottom:26px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
                 <div class="ring" id="ring" style="--val:0">
                     <span class="ring-val" id="ringVal">0%</span>
                 </div>
-                <div>
+                <div id="profilePicContainer"></div>
+                <div style="flex:1;min-width:200px">
                     <h2 id="studentName">—</h2>
                     <p class="muted" id="courseInfo">—</p>
                     <p style="margin-top:6px"><b>Roll No:</b> <span id="rollNumber">—</span></p>
@@ -68,6 +70,20 @@
                     <div class="ico">❌</div>
                     <div class="val" id="statAbsent">0</div>
                     <div class="lbl">Classes Absent</div>
+                </div>
+            </div>
+
+            <!-- Subject Enrollment & Teacher Approval Status -->
+            <div class="panel" style="margin-bottom:26px">
+                <div class="panel-head">
+                    <div>
+                        <h3>My Subject Approvals & Enrollments</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Status of subjects you requested for your branch</p>
+                    </div>
+                    <a class="btn btn-primary btn-sm" href="enroll.html" style="text-decoration:none">➕ Enroll in Subjects</a>
+                </div>
+                <div class="panel-body" id="enrollmentList">
+                    <p class="muted">Loading enrollments…</p>
                 </div>
             </div>
 

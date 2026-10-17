@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/teacher.css" />
+    <style>
+        .admin-nav .badge-count {
+            background: #ef4444; color: #fff; font-size: 0.72rem;
+            padding: 2px 7px; border-radius: 10px; margin-left: 6px;
+        }
+        .admin-tab-btn {
+            background: none; border: none; font-size: 0.95rem; font-weight: 600;
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; color: #64748b;
+        }
+        .admin-tab-btn.active {
+            background: #0f172a; color: #fff;
+        }
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
+            display: none; justify-content: center; align-items: center; z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+        .modal-box {
+            background: #fff; border-radius: 14px; max-width: 540px; width: 92%;
+            max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+        .modal-header {
+            padding: 16px 22px; border-bottom: 1px solid var(--line);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body { padding: 20px 22px; }
+        .modal-footer {
+            padding: 14px 22px; border-top: 1px solid var(--line);
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+        .btn-close-modal {
+            background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #64748b;
+        }
+    </style>
+</head>
+<body data-page="admin">
+<div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">⚡</span> Smart<span>Admin</span></div>
+        <nav class="admin-nav">
+            <a href="dashboard.html" class="active"><span class="ico">🏠</span> Overview</a>
+            <a href="#enrollmentsSection" onclick="switchAdminTab('enrollments')"><span class="ico">📋</span> Student Approvals <span id="adminPendingBadge" class="badge-count" style="display:none">0</span></a>
+            <a href="#subjectsSection" onclick="switchAdminTab('subjects')"><span class="ico">📚</span> Subjects & Catalog</a>
+            <a href="#teachersSection" onclick="switchAdminTab('teachers')"><span class="ico">🧑‍🏫</span> Teachers Directory</a>
+            <a href="#studentsSection" onclick="switchAdminTab('students')"><span class="ico">🧑‍🎓</span> Students Directory</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Administrator Control Center</h2>
+            </div>
+            <div class="user-chip"><span class="avatar" style="background:#0f172a">A</span> <span id="userName">Administrator</span></div>
+        </div>
+
+        <div class="content">
+            <!-- Admin Profile Card -->
+            <div class="pct-card" style="margin-bottom:26px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+                <div id="adminProfilePicContainer"></div>
+                <div style="flex:1;min-width:200px">
+                    <h2>Administrator</h2>
+                    <p class="muted">System-wide Access & Institutional Policy Oversight</p>
+                    <p class="muted" id="adminEmail" style="font-size:0.85rem;margin-top:4px">admin@smartcampus.edu</p>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <button class="btn btn-primary" onclick="openModal('modalAddSubject')" style="background:#0f172a">+ Add Subject</button>
+                    <button class="btn btn-primary" onclick="openModal('modalAddStudent')" style="background:#0284c7">+ Add Student</button>
+                    <button class="btn btn-primary" onclick="openModal('modalAddTeacher')" style="background:#0d9488">+ Add Teacher</button>
+                </div>
+            </div>
+
+            <div class="alert" id="alertBox"></div>
+
+            <!-- Stats Grid -->
+            <div class="stat-grid">
+                <div class="stat c-primary">
+                    <div class="ico">🧑‍🏫</div>
+                    <div class="val" id="statTeachers">0</div>
+                    <div class="lbl">Total Teachers</div>
+                </div>
+                <div class="stat c-success">
+                    <div class="ico">🧑‍🎓</div>
+                    <div class="val" id="statStudents">0</div>
+                    <div class="lbl">Total Students</div>
+                </div>
+                <div class="stat c-warning">
+                    <div class="ico">📚</div>
+                    <div class="val" id="statSubjects">0</div>
+                    <div class="lbl">Total Subjects</div>
+                </div>
+                <div class="stat c-danger">
+                    <div class="ico">⏳</div>
+                    <div class="val" id="statPending">0</div>
+                    <div class="lbl">Pending Approvals</div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Controls -->
+            <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:12px;flex-wrap:wrap">
+                <button class="admin-tab-btn active" id="btnTabOverview" onclick="switchAdminTab('overview')">All Approvals & Enrollments</button>
+                <button class="admin-tab-btn" id="btnTabSubjects" onclick="switchAdminTab('subjects')">Subjects Catalog</button>
+                <button class="admin-tab-btn" id="btnTabTeachers" onclick="switchAdminTab('teachers')">Teachers Directory</button>
+                <button class="admin-tab-btn" id="btnTabStudents" onclick="switchAdminTab('students')">Students Directory</button>
+            </div>
+
+            <!-- SECTION 1: ALL ENROLLMENTS & APPROVALS -->
+            <div id="viewEnrollments" class="panel" style="margin-top:0">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <h3>Student Subject Approvals & Enrollments</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Review, approve, reject or delete enrollments across all branches & teachers</p>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn btn-sm btn-outline" onclick="openModal('modalEnrollStudent')">⚡ Enroll Student by Roll No</button>
+                        <button class="btn btn-sm btn-ghost" id="adminFilterPending" onclick="filterAdminEnrollments('pending')" style="font-weight:700">Pending Only</button>
+                        <button class="btn btn-sm btn-ghost" id="adminFilterAll" onclick="filterAdminEnrollments('all')">Show All</button>
+                    </div>
+                </div>
+                <div class="panel-body" id="adminEnrollmentsTable">
+                    <p class="muted">Loading enrollments…</p>
+                </div>
+            </div>
+
+            <!-- SECTION 2: SUBJECTS -->
+            <div id="viewSubjects" class="panel" style="margin-top:0;display:none">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <h3>Campus Subjects & Course Offerings</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Manage subjects, designated branches, and faculty assignments</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modalAddSubject')" style="background:#0f172a">+ Create New Subject</button>
+                </div>
+                <div class="panel-body" id="adminSubjectsTable">
+                    <p class="muted">Loading subjects…</p>
+                </div>
+            </div>
+
+            <!-- SECTION 3: TEACHERS -->
+            <div id="viewTeachers" class="panel" style="margin-top:0;display:none">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <h3>Faculty Directory</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Manage registered teachers, departments, and subject assignments</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modalAddTeacher')" style="background:#0d9488">+ Add New Teacher</button>
+                </div>
+                <div class="panel-body" id="adminTeachersTable">
+                    <p class="muted">Loading teachers…</p>
+                </div>
+            </div>
+
+            <!-- SECTION 4: STUDENTS -->
+            <div id="viewStudents" class="panel" style="margin-top:0;display:none">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <h3>Students Directory</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Manage registered students, roll numbers, branches, and enrollments</p>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-outline" onclick="openModal('modalEnrollStudent')">⚡ Enroll Student</button>
+                        <button class="btn btn-primary" onclick="openModal('modalAddStudent')" style="background:#0284c7">+ Add New Student</button>
+                    </div>
+                </div>
+                <div class="panel-body" id="adminStudentsTable">
+                    <p class="muted">Loading students…</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- 1. Modal: Add Subject -->
+<div class="modal-overlay" id="modalAddSubject">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Add New Subject</h3>
+            <button class="btn-close-modal" onclick="closeModal('modalAddSubject')">×</button>
+        </div>
+        <form id="formAddSubject">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Subject Code *</label>
+                        <input class="form-control" name="subject_code" placeholder="e.g. CS303" style="text-transform:uppercase" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Subject Name *</label>
+                        <input class="form-control" name="subject_name" placeholder="e.g. Operating Systems" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Course *</label>
+                        <input class="form-control" name="course" placeholder="e.g. B.Tech" value="B.Tech" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Branch *</label>
+                        <input class="form-control" name="branch" placeholder="e.g. CSE" style="text-transform:uppercase" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Semester (1 - 8) *</label>
+                        <input class="form-control" name="semester" type="number" min="1" max="8" value="3" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Assign Initial Faculty (Optional)</label>
+                        <select class="form-control" name="teacher_id" id="modalSubjectTeacherSelect">
+                            <option value="">-- No initial teacher --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalAddSubject')">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="background:#0f172a">Create Subject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Modal: Add Student -->
+<div class="modal-overlay" id="modalAddStudent">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Add New Student</h3>
+            <button class="btn-close-modal" onclick="closeModal('modalAddStudent')">×</button>
+        </div>
+        <form id="formAddStudent">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input class="form-control" name="full_name" placeholder="e.g. Rahul Sharma" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Roll Number *</label>
+                        <input class="form-control" name="roll_number" placeholder="e.g. CSE-2023-002" style="text-transform:uppercase" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Branch *</label>
+                        <input class="form-control" name="branch" placeholder="e.g. CSE" style="text-transform:uppercase" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Course *</label>
+                        <input class="form-control" name="course" placeholder="e.g. B.Tech" value="B.Tech" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Semester (1 - 8) *</label>
+                        <input class="form-control" name="semester" type="number" min="1" max="8" value="3" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input class="form-control" name="phone" placeholder="e.g. 9876543210" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Login Username *</label>
+                        <input class="form-control" name="username" placeholder="e.g. rahul" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address *</label>
+                        <input class="form-control" name="email" type="email" placeholder="e.g. rahul@smartcampus.edu" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input class="form-control" name="password" type="password" placeholder="Min 6 characters" required />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalAddStudent')">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="background:#0284c7">Create Student</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. Modal: Add Teacher -->
+<div class="modal-overlay" id="modalAddTeacher">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Add New Teacher / Faculty</h3>
+            <button class="btn-close-modal" onclick="closeModal('modalAddTeacher')">×</button>
+        </div>
+        <form id="formAddTeacher">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input class="form-control" name="full_name" placeholder="e.g. Dr. Priya Verma" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Employee ID *</label>
+                        <input class="form-control" name="employee_id" placeholder="e.g. EMP-102" style="text-transform:uppercase" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Department *</label>
+                        <input class="form-control" name="department" placeholder="e.g. Computer Science" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input class="form-control" name="phone" placeholder="e.g. 9812345678" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Login Username *</label>
+                        <input class="form-control" name="username" placeholder="e.g. priya.verma" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address *</label>
+                        <input class="form-control" name="email" type="email" placeholder="e.g. priya@smartcampus.edu" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input class="form-control" name="password" type="password" placeholder="Min 6 characters" required />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalAddTeacher')">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="background:#0d9488">Create Teacher</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 4. Modal: Direct Enroll Student -->
+<div class="modal-overlay" id="modalEnrollStudent">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>⚡ Direct Enroll Student into Subject</h3>
+            <button class="btn-close-modal" onclick="closeModal('modalEnrollStudent')">×</button>
+        </div>
+        <form id="formDirectEnroll">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Student Roll Number *</label>
+                    <input class="form-control" name="roll_number" placeholder="e.g. CSE-2023-001" style="text-transform:uppercase" required />
+                </div>
+                <div class="form-group">
+                    <label>Student Full Name (Optional - auto-creates placeholder if unregistered)</label>
+                    <input class="form-control" name="full_name" placeholder="e.g. Rahul Sharma" />
+                </div>
+                <div class="form-group">
+                    <label>Select Subject *</label>
+                    <select class="form-control" name="subject_id" id="modalEnrollSubjectSelect" required></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalEnrollStudent')">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="background:#0f172a">Enroll & Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 5. Modal: Assign Faculty to Subject -->
+<div class="modal-overlay" id="modalAssignFaculty">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Assign Faculty to Subject</h3>
+            <button class="btn-close-modal" onclick="closeModal('modalAssignFaculty')">×</button>
+        </div>
+        <form id="formAssignFaculty">
+            <input type="hidden" name="subject_id" id="assignSubjectIdInput" />
+            <div class="modal-body">
+                <p id="assignSubjectLabel" style="font-weight:700;margin-bottom:14px"></p>
+                <div class="form-group">
+                    <label>Select Faculty Member *</label>
+                    <select class="form-control" name="teacher_id" id="modalAssignTeacherSelect" required></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalAssignFaculty')">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="background:#0f172a">Assign Faculty</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/admin.js"></script>
+</body>
+</html>

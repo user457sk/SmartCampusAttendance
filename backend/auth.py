@@ -65,18 +65,31 @@ def login_required(f):
     return wrapper
 
 
-def role_required(role):
-    """Allow access only to a specific role ('student' or 'teacher')."""
+def role_required(*roles):
+    """Allow access only to specific role(s). Admin has access to teacher/staff endpoints as well."""
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             if not current_user_id():
                 return jsonify({"error": "Authentication required. Please log in."}), 401
-            if current_role() != role:
-                return jsonify({"error": f"Access denied. {role.title()}s only."}), 403
+            u_role = current_role()
+            if u_role not in roles and u_role != "admin":
+                return jsonify({"error": f"Access denied. Allowed: {', '.join(roles)}."}), 403
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def admin_required(f):
+    """Allow access only to admin users."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not current_user_id():
+            return jsonify({"error": "Authentication required. Please log in."}), 401
+        if current_role() != "admin":
+            return jsonify({"error": "Access denied. Admin only."}), 403
+        return f(*args, **kwargs)
+    return wrapper
 
 
 # ------------------------------------------------------------------

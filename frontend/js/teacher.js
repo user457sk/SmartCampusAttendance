@@ -9,17 +9,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!user) return;
 
     markActiveNav();
-
-    const nameEl = document.getElementById("userName");
-
-    if (nameEl) {
-        nameEl.textContent = user.username;
-    }
+    renderTopBarUser(user);
+    updateTeacherNavBadge();
 
     const page = document.body.dataset.page;
 
     if (page === "dashboard") {
-        await loadDashboard();
+        await loadDashboard(user);
+    }
+
+    if (page === "approvals") {
+        await loadApprovalsPage();
     }
 
     if (page === "subjects") {
@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    Teacher Dashboard
    ============================================================ */
 
-async function loadDashboard() {
+async function loadDashboard(currentUser) {
 
     try {
 
@@ -75,6 +75,90 @@ async function loadDashboard() {
 
             deptInfo.textContent =
                 `${department} • Employee ID ${employeeId}`;
+        }
+
+        const teacherEmail = document.getElementById("teacherEmail");
+        if (teacherEmail && profile.email) {
+            teacherEmail.textContent = `📧 ${profile.email}`;
+        }
+
+        /* ---------------- Profile Picture Manager ---------------- */
+        setupProfilePicManager({
+            containerId: "teacherProfilePicContainer",
+            fallbackInitial: (profile.full_name || profile.username || "T").charAt(0).toUpperCase(),
+            currentPic: profile.profile_pic,
+            onUpdate: (newPic) => {
+                if (currentUser) {
+                    currentUser.profile_pic = newPic;
+                    renderTopBarUser(currentUser);
+                }
+            }
+        });
+
+        /* ---------------- Pending Approvals ---------------- */
+        let pendingReqs = [];
+        try {
+            const reqData = await api("/api/teachers/enrollment-requests?status=pending");
+            pendingReqs = (reqData && reqData.requests) || [];
+        } catch (e) {
+            console.error("Could not load approvals:", e);
+        }
+
+        const statPending = document.getElementById("statPendingApprovals");
+        if (statPending) {
+            statPending.textContent = pendingReqs.length;
+        }
+
+        const navBadge = document.getElementById("navApprovalBadge");
+        if (navBadge) {
+            if (pendingReqs.length > 0) {
+                navBadge.textContent = pendingReqs.length;
+                navBadge.style.display = "inline-block";
+            } else {
+                navBadge.style.display = "none";
+            }
+        }
+
+        const pendingBox = document.getElementById("pendingApprovalsList");
+        if (pendingBox) {
+            if (!pendingReqs.length) {
+                pendingBox.innerHTML = `<p class="muted" style="padding:10px 0">No pending student approval requests for your subjects.</p>`;
+            } else {
+                pendingBox.innerHTML = `
+                    <div style="overflow-x:auto">
+                        <table class="table" style="width:100%;text-align:left;border-collapse:collapse">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--line);color:var(--muted);font-size:0.85rem">
+                                    <th style="padding:10px">Roll No</th>
+                                    <th style="padding:10px">Student Name</th>
+                                    <th style="padding:10px">Branch</th>
+                                    <th style="padding:10px">Requested Subject</th>
+                                    <th style="padding:10px">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pendingReqs.slice(0, 5).map(r => `
+                                    <tr style="border-bottom:1px solid var(--line);font-size:0.9rem">
+                                        <td style="padding:10px"><b>${esc(r.roll_number)}</b></td>
+                                        <td style="padding:10px">${esc(r.student_name)}</td>
+                                        <td style="padding:10px"><span class="badge badge-branch">${esc(r.student_branch)}</span></td>
+                                        <td style="padding:10px"><b>${esc(r.subject_code)}</b> - ${esc(r.subject_name)}</td>
+                                        <td style="padding:10px">
+                                            <button class="btn btn-sm btn-primary" onclick="quickApproveEnrollment(${r.id})" style="background:#0d9488;margin-right:6px">
+                                                ✅ Approve
+                                            </button>
+                                            <button class="btn btn-sm btn-ghost" onclick="quickRejectEnrollment(${r.id})" style="color:var(--danger)">
+                                                ❌ Reject
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                        ${pendingReqs.length > 5 ? `<div style="text-align:right;margin-top:10px"><a href="approvals.html" style="font-size:0.85rem;color:var(--t-accent);font-weight:700">View all ${pendingReqs.length} requests →</a></div>` : ''}
+                    </div>
+                `;
+            }
         }
 
 
@@ -480,6 +564,149 @@ async function loadSubjects() {
 
     }
 
+    /* ---------------- Enrolled Students Roster ---------------- */
+    initSubjectRoster(mine);
+
+}
+
+
+/* ============================================================
+   Subject Enrolled Students Roster
+   ============================================================ */
+
+function initSubjectRoster(mySubjects) {
+    const select = document.getElementById("rosterSubjectSelect");
+    const addBtn = document.getElementById("btnAddStudentByRoll");
+    const rollInput = document.getElementById("addStudentRollInput");
+    const alertBox = document.getElementById("rosterAlertBox");
+
+    if (!select) return;
+
+    if (!mySubjects || !mySubjects.length) {
+        select.innerHTML = '<option value="">No subjects assigned</option>';
+        const tableBox = document.getElementById("rosterStudentsTable");
+        if (tableBox) tableBox.innerHTML = '<p class="muted">You have no subjects assigned yet.</p>';
+        return;
+    }
+
+    select.innerHTML = mySubjects.map(s => `
+        <option value="${s.id}">
+            ${esc(s.subject_code)} – ${esc(s.subject_name)} (${esc(s.branch)})
+        </option>
+    `).join("");
+
+    select.onchange = () => {
+        loadSubjectRoster(select.value);
+    };
+
+    const nameInput = document.getElementById("addStudentNameInput");
+
+    if (addBtn && rollInput) {
+        addBtn.onclick = async () => {
+            const subjectId = select.value;
+            const rollNumber = rollInput.value.trim().toUpperCase();
+            const fullName = nameInput ? nameInput.value.trim() : "";
+
+            if (!subjectId) {
+                if (alertBox) showAlert(alertBox, "Please select a subject first.", "error");
+                return;
+            }
+            if (!rollNumber) {
+                if (alertBox) showAlert(alertBox, "Please enter a valid student roll number.", "error");
+                return;
+            }
+
+            try {
+                const res = await api(`/api/teachers/subjects/${subjectId}/students/add`, {
+                    method: "POST",
+                    body: { roll_number: rollNumber, full_name: fullName }
+                });
+                if (alertBox) showAlert(alertBox, res.message || "Student enrolled into subject!", "success");
+                rollInput.value = "";
+                if (nameInput) nameInput.value = "";
+                await loadSubjectRoster(subjectId);
+            } catch (err) {
+                if (alertBox) showAlert(alertBox, err.message, "error");
+            }
+        };
+    }
+
+    if (mySubjects.length > 0) {
+        loadSubjectRoster(mySubjects[0].id);
+    }
+}
+
+async function loadSubjectRoster(subjectId) {
+    const tableBox = document.getElementById("rosterStudentsTable");
+    if (!tableBox || !subjectId) return;
+
+    tableBox.innerHTML = '<p class="muted">Loading students roster…</p>';
+    try {
+        const data = await api(`/api/teachers/subjects/${subjectId}/students`);
+        const students = (data && data.students) || [];
+        const subject = data && data.subject;
+
+        if (!students.length) {
+            tableBox.innerHTML = `
+                <div style="text-align:center;padding:25px 10px;background:#fff;border-radius:8px;border:1px dashed var(--line)">
+                    <p class="muted" style="margin-bottom:6px">No students currently enrolled in ${esc((subject && subject.subject_code) || 'this subject')}.</p>
+                    <small class="muted">Enter student's roll number and name above to enroll them directly.</small>
+                </div>
+            `;
+            return;
+        }
+
+        tableBox.innerHTML = `
+            <div style="overflow-x:auto">
+                <table class="table" style="width:100%;text-align:left;border-collapse:collapse">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--line);color:var(--muted);font-size:0.85rem">
+                            <th style="padding:10px">Roll Number</th>
+                            <th style="padding:10px">Student Name</th>
+                            <th style="padding:10px">Branch & Course</th>
+                            <th style="padding:10px">Semester</th>
+                            <th style="padding:10px">Account Status</th>
+                            <th style="padding:10px;text-align:center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${students.map(st => `
+                            <tr style="border-bottom:1px solid var(--line);font-size:0.9rem">
+                                <td style="padding:10px"><b>${esc(st.roll_number)}</b></td>
+                                <td style="padding:10px"><b>${esc(st.full_name)}</b></td>
+                                <td style="padding:10px"><span class="badge badge-branch">${esc(st.branch)}</span> ${esc(st.course)}</td>
+                                <td style="padding:10px">Sem ${esc(st.semester)}</td>
+                                <td style="padding:10px">
+                                    ${st.user_id ? '<span class="badge badge-approved">Registered</span>' : '<span class="badge badge-pending" title="Account not created yet. Attendance will auto-sync on register.">Pending Account</span>'}
+                                </td>
+                                <td style="padding:10px;text-align:center">
+                                    <button class="btn btn-sm btn-ghost" onclick="quickRemoveStudentFromSubject(${subjectId}, ${st.id}, '${esc(st.full_name)}')" style="color:var(--danger);font-weight:600">
+                                        🗑️ Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (err) {
+        tableBox.innerHTML = `<p class="muted">Failed to load roster: ${esc(err.message)}</p>`;
+    }
+}
+
+async function quickRemoveStudentFromSubject(subjectId, studentId, studentName) {
+    if (!confirm(`Are you sure you want to remove ${studentName} from this subject?`)) return;
+    const alertBox = document.getElementById("rosterAlertBox");
+    try {
+        const res = await api(`/api/teachers/subjects/${subjectId}/students/${studentId}/remove`, {
+            method: "POST"
+        });
+        if (alertBox) showAlert(alertBox, res.message || "Student removed.", "success");
+        await loadSubjectRoster(subjectId);
+    } catch (err) {
+        if (alertBox) showAlert(alertBox, err.message, "error");
+    }
 }
 
 
@@ -1139,4 +1366,241 @@ async function loadHistoryData() {
             </tr>
         `;
 
+}
+
+
+/* ============================================================
+   TEACHER NAV BADGE
+   ============================================================ */
+
+async function updateTeacherNavBadge() {
+    try {
+        const reqData = await api("/api/teachers/enrollment-requests?status=pending");
+        const count = (reqData && reqData.requests && reqData.requests.length) || 0;
+        const navBadge = document.getElementById("navApprovalBadge");
+        if (navBadge) {
+            if (count > 0) {
+                navBadge.textContent = count;
+                navBadge.style.display = "inline-block";
+            } else {
+                navBadge.style.display = "none";
+            }
+        }
+    } catch (e) {
+        // silent
+    }
+}
+
+async function quickApproveEnrollment(id) {
+    try {
+        const res = await api(`/api/teachers/enrollment-requests/${id}/approve`, { method: "POST" });
+        alert(res.message || "Enrollment approved successfully!");
+        const page = document.body.dataset.page;
+        if (page === "dashboard") await loadDashboard();
+        if (page === "approvals") await loadApprovalsPage();
+        updateTeacherNavBadge();
+    } catch (err) {
+        alert(err.message || "Failed to approve enrollment.");
+    }
+}
+
+async function quickRejectEnrollment(id) {
+    if (!confirm("Are you sure you want to reject this student's enrollment request?")) return;
+    try {
+        const res = await api(`/api/teachers/enrollment-requests/${id}/reject`, { method: "POST" });
+        alert(res.message || "Enrollment rejected.");
+        const page = document.body.dataset.page;
+        if (page === "dashboard") await loadDashboard();
+        if (page === "approvals") await loadApprovalsPage();
+        updateTeacherNavBadge();
+    } catch (err) {
+        alert(err.message || "Failed to reject enrollment.");
+    }
+}
+
+
+/* ============================================================
+   STUDENT APPROVALS PAGE
+   ============================================================ */
+
+async function loadApprovalsPage() {
+    const container = document.getElementById("approvalsTableContainer");
+    const alertBox = document.getElementById("alertBox");
+    const tabPendingBtn = document.getElementById("tabPendingBtn");
+    const tabAllBtn = document.getElementById("tabAllBtn");
+    const searchInput = document.getElementById("searchInput");
+
+    let currentFilter = "pending";
+    let requestsData = [];
+
+    async function fetchData() {
+        if (!container) return;
+        container.innerHTML = `<p class="muted" style="padding:20px 0">Loading requests…</p>`;
+        try {
+            const data = await api(`/api/teachers/enrollment-requests?status=${currentFilter}`);
+            requestsData = (data && data.requests) || [];
+            renderTable();
+        } catch (err) {
+            console.error("loadApprovalsPage error:", err);
+            container.innerHTML = `<p class="muted">Failed to load approval requests: ${esc(err.message)}</p>`;
+        }
+    }
+
+    function renderTable() {
+        const query = (searchInput && searchInput.value || "").toLowerCase().trim();
+        const filtered = requestsData.filter(r => {
+            if (!query) return true;
+            return (
+                (r.student_name || "").toLowerCase().includes(query) ||
+                (r.roll_number || "").toLowerCase().includes(query) ||
+                (r.subject_code || "").toLowerCase().includes(query) ||
+                (r.subject_name || "").toLowerCase().includes(query) ||
+                (r.student_branch || "").toLowerCase().includes(query)
+            );
+        });
+
+        if (!filtered.length) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:40px 20px">
+                    <p class="muted" style="font-size:1.05rem">No ${currentFilter === "pending" ? "pending" : ""} student enrollment requests found.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="overflow-x:auto">
+                <table class="table" style="width:100%;text-align:left;border-collapse:collapse">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--line);color:var(--muted);font-size:0.85rem">
+                            <th style="padding:12px 10px">Roll Number</th>
+                            <th style="padding:12px 10px">Student Name</th>
+                            <th style="padding:12px 10px">Branch & Sem</th>
+                            <th style="padding:12px 10px">Requested Subject</th>
+                            <th style="padding:12px 10px">Date Requested</th>
+                            <th style="padding:12px 10px">Status</th>
+                            <th style="padding:12px 10px;text-align:center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(r => {
+                            let statusBadge = "";
+                            if (r.status === "approved") {
+                                statusBadge = '<span class="badge badge-approved">✅ Approved</span>';
+                            } else if (r.status === "pending") {
+                                statusBadge = '<span class="badge badge-pending">⏳ Pending Review</span>';
+                            } else {
+                                statusBadge = '<span class="badge badge-rejected">❌ Rejected</span>';
+                            }
+
+                            return `
+                                <tr style="border-bottom:1px solid var(--line);font-size:0.9rem">
+                                    <td style="padding:12px 10px"><b>${esc(r.roll_number)}</b></td>
+                                    <td style="padding:12px 10px">
+                                        <div style="font-weight:700">${esc(r.student_name)}</div>
+                                        <div style="font-size:0.78rem;color:var(--muted)">${esc(r.student_email || "")}</div>
+                                    </td>
+                                    <td style="padding:12px 10px">
+                                        <span class="badge badge-branch">${esc(r.student_branch)}</span>
+                                        <span style="font-size:0.8rem;color:var(--muted);margin-left:4px">Sem ${esc(r.semester)}</span>
+                                    </td>
+                                    <td style="padding:12px 10px">
+                                        <b>${esc(r.subject_code)}</b> – ${esc(r.subject_name)}
+                                    </td>
+                                    <td style="padding:12px 10px;color:var(--muted);font-size:0.85rem">
+                                        ${prettyDate(r.requested_at ? r.requested_at.split(' ')[0] : '')}
+                                    </td>
+                                    <td style="padding:12px 10px">${statusBadge}</td>
+                                    <td style="padding:12px 10px;text-align:center">
+                                        ${r.status === "pending" ? `
+                                            <button class="btn btn-sm btn-primary" onclick="quickApproveEnrollment(${r.id})" style="background:#0d9488;margin-right:6px">
+                                                ✅ Approve
+                                            </button>
+                                            <button class="btn btn-sm btn-ghost" onclick="quickRejectEnrollment(${r.id})" style="color:var(--danger)">
+                                                ❌ Reject
+                                            </button>
+                                        ` : `
+                                            <span style="font-size:0.85rem;color:var(--muted)">Reviewed</span>
+                                        `}
+                                    </td>
+                                </tr>
+                            `;
+                        }).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    if (tabPendingBtn && tabAllBtn) {
+        tabPendingBtn.onclick = () => {
+            currentFilter = "pending";
+            tabPendingBtn.style.fontWeight = "700";
+            tabPendingBtn.style.color = "var(--t-accent)";
+            tabAllBtn.style.fontWeight = "400";
+            tabAllBtn.style.color = "inherit";
+            fetchData();
+        };
+
+        tabAllBtn.onclick = () => {
+            currentFilter = "all";
+            tabPendingBtn.style.fontWeight = "400";
+            tabPendingBtn.style.color = "inherit";
+            tabAllBtn.style.fontWeight = "700";
+            tabAllBtn.style.color = "var(--t-accent)";
+            fetchData();
+        };
+    }
+
+    if (searchInput) {
+        searchInput.oninput = () => renderTable();
+    }
+
+    /* Setup Direct Add Student form */
+    const directSelect = document.getElementById("directAddSubjectSelect");
+    const directRoll = document.getElementById("directAddRollInput");
+    const directName = document.getElementById("directAddNameInput");
+    const directBtn = document.getElementById("btnDirectAddStudent");
+
+    if (directSelect) {
+        try {
+            const mine = await api("/api/teachers/subjects");
+            directSelect.innerHTML = (mine || []).map(s => `
+                <option value="${s.id}">${esc(s.subject_code)} – ${esc(s.subject_name)} (${esc(s.branch)})</option>
+            `).join("");
+        } catch (e) {
+            console.error("Failed to load subjects for direct add:", e);
+        }
+    }
+
+    if (directBtn && directRoll) {
+        directBtn.onclick = async () => {
+            const subId = directSelect ? directSelect.value : null;
+            const roll = directRoll.value.trim().toUpperCase();
+            const name = directName ? directName.value.trim() : "";
+            if (!subId) {
+                showAlert(alertBox, "Please select a subject.", "error");
+                return;
+            }
+            if (!roll) {
+                showAlert(alertBox, "Please enter student's roll number.", "error");
+                return;
+            }
+            try {
+                const res = await api(`/api/teachers/subjects/${subId}/students/add`, {
+                    method: "POST",
+                    body: { roll_number: roll, full_name: name }
+                });
+                showAlert(alertBox, res.message || "Student enrolled successfully!", "success");
+                directRoll.value = "";
+                if (directName) directName.value = "";
+                await fetchData();
+                updateTeacherNavBadge();
+            } catch (err) {
+                showAlert(alertBox, err.message, "error");
+            }
+        };
+    }
+
+    await fetchData();
 }

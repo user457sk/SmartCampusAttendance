@@ -15,6 +15,7 @@
         <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
         <nav>
             <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="approvals.html"><span class="ico">📋</span> Student Approvals <span id="navApprovalBadge" style="display:none;background:#f59e0b;color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></a>
             <a href="subjects.html"><span class="ico">📚</span> My Subjects</a>
             <a href="mark-attendance.html"><span class="ico">✅</span> Mark Attendance</a>
             <a href="attendance-history.html"><span class="ico">🕘</span> History & Reports</a>
@@ -38,6 +39,48 @@
                 <div class="panel-head"><h3>My Subjects</h3></div>
                 <div class="panel-body">
                     <div class="grid grid-3" id="mySubjects"><p class="muted">Loading…</p></div>
+                </div>
+            </div>
+
+            <!-- Manage Subject Students / Enrolled Roster -->
+            <div class="panel" style="margin-top:24px">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <h3>Enrolled Students Roster</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Directly add or remove students by roll number for your subjects</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="font-size:0.85rem;font-weight:600">Select Subject:</label>
+                        <select class="form-control" id="rosterSubjectSelect" style="max-width:260px"></select>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="alert" id="rosterAlertBox"></div>
+
+                    <!-- Add Student by Roll & Name Form -->
+                    <div style="background:#f8fafc;padding:16px;border-radius:10px;border:1px solid var(--line);margin-bottom:14px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                        <div style="flex:1;min-width:180px">
+                            <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:4px">Student Roll Number *</label>
+                            <input class="form-control" id="addStudentRollInput" placeholder="e.g. CSE-2023-010" style="text-transform:uppercase" required />
+                        </div>
+                        <div style="flex:1;min-width:200px">
+                            <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:4px">Student Full Name (If not registered)</label>
+                            <input class="form-control" id="addStudentNameInput" placeholder="e.g. Rohan Kumar" />
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" id="btnAddStudentByRoll" style="background:#0d9488">
+                                + Enroll Student
+                            </button>
+                        </div>
+                    </div>
+                    <p class="muted" style="font-size:0.82rem;margin-top:0;margin-bottom:18px">
+                        💡 <b>Notice:</b> Student ne portal par account banaya ho ya nahi, aap unhe Roll No aur Name se add karke attendance mark kar sakte hain. Jab student baad me register karega, attendance auto-sync ho jayegi.
+                    </p>
+
+                    <!-- Enrolled Students Table -->
+                    <div id="rosterStudentsTable">
+                        <p class="muted">Loading students roster…</p>
+                    </div>
                 </div>
             </div>
 

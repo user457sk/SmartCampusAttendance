@@ -97,22 +97,30 @@ async function loadDashboard(currentUser) {
 
         /* ---------------- Pending Approvals ---------------- */
         let pendingReqs = [];
+        let pendingStudentRegistrations = [];
         try {
             const reqData = await api("/api/teachers/enrollment-requests?status=pending");
             pendingReqs = (reqData && reqData.requests) || [];
         } catch (e) {
             console.error("Could not load approvals:", e);
         }
+        try {
+            const registrationData = await api("/api/teachers/student-registrations");
+            pendingStudentRegistrations = registrationData.registrations || [];
+        } catch (e) {
+            console.error("Could not load student registrations:", e);
+        }
+        const totalPendingApprovals = pendingReqs.length + pendingStudentRegistrations.length;
 
         const statPending = document.getElementById("statPendingApprovals");
         if (statPending) {
-            statPending.textContent = pendingReqs.length;
+            statPending.textContent = totalPendingApprovals;
         }
 
         const navBadge = document.getElementById("navApprovalBadge");
         if (navBadge) {
-            if (pendingReqs.length > 0) {
-                navBadge.textContent = pendingReqs.length;
+            if (totalPendingApprovals > 0) {
+                navBadge.textContent = totalPendingApprovals;
                 navBadge.style.display = "inline-block";
             } else {
                 navBadge.style.display = "none";
@@ -1375,8 +1383,11 @@ async function loadHistoryData() {
 
 async function updateTeacherNavBadge() {
     try {
-        const reqData = await api("/api/teachers/enrollment-requests?status=pending");
-        const count = (reqData && reqData.requests && reqData.requests.length) || 0;
+        const [reqData, studentData] = await Promise.all([
+            api("/api/teachers/enrollment-requests?status=pending"),
+            api("/api/teachers/student-registrations")
+        ]);
+        const count = (reqData.requests || []).length + (studentData.registrations || []).length;
         const navBadge = document.getElementById("navApprovalBadge");
         if (navBadge) {
             if (count > 0) {
@@ -1386,8 +1397,8 @@ async function updateTeacherNavBadge() {
                 navBadge.style.display = "none";
             }
         }
-    } catch (e) {
-        // silent
+    } catch (error) {
+        console.error("Could not update teacher approval badge:", error);
     }
 }
 
@@ -1429,6 +1440,8 @@ async function loadApprovalsPage() {
     const tabPendingBtn = document.getElementById("tabPendingBtn");
     const tabAllBtn = document.getElementById("tabAllBtn");
     const searchInput = document.getElementById("searchInput");
+
+    await loadPendingStudentRegistrations();
 
     let currentFilter = "pending";
     let requestsData = [];
@@ -1603,4 +1616,57 @@ async function loadApprovalsPage() {
     }
 
     await fetchData();
+}
+
+async function loadPendingStudentRegistrations() {
+    const container = document.getElementById("studentRegistrationsTable");
+    if (!container) return;
+    try {
+        const data = await api("/api/teachers/student-registrations");
+        const registrations = data.registrations || [];
+        if (!registrations.length) {
+            container.innerHTML = '<p class="muted">No student accounts are waiting for approval.</p>';
+            return;
+        }
+        container.innerHTML = `
+            <div style="overflow-x:auto">
+                <table class="table" style="width:100%;text-align:left;border-collapse:collapse">
+                    <thead><tr>
+                        <th style="padding:10px">Name</th>
+                        <th style="padding:10px">Username</th>
+                        <th style="padding:10px">Email</th>
+                        <th style="padding:10px">Roll Number</th>
+                        <th style="padding:10px">Branch</th>
+                        <th style="padding:10px;text-align:center">Actions</th>
+                    </tr></thead>
+                    <tbody>${registrations.map(user => `
+                        <tr style="border-top:1px solid var(--line)">
+                            <td style="padding:10px">${esc(user.full_name || "—")}</td>
+                            <td style="padding:10px">${esc(user.username)}</td>
+                            <td style="padding:10px">${esc(user.email)}</td>
+                            <td style="padding:10px">${esc(user.roll_number || "—")}</td>
+                            <td style="padding:10px">${esc(user.branch || "—")}</td>
+                            <td style="padding:10px;text-align:center">
+                                <button class="btn btn-sm btn-primary" onclick="reviewStudentRegistration(${user.id}, 'approve')">Approve</button>
+                                <button class="btn btn-sm btn-ghost" onclick="reviewStudentRegistration(${user.id}, 'reject')" style="color:var(--danger)">Reject</button>
+                            </td>
+                        </tr>
+                    `).join("")}</tbody>
+                </table>
+            </div>`;
+    } catch (error) {
+        container.innerHTML = `<p class="muted">Failed to load student registrations: ${esc(error.message)}</p>`;
+    }
+}
+
+async function reviewStudentRegistration(userId, action) {
+    if (action === "reject" && !confirm("Reject this student account?")) return;
+    try {
+        const result = await api(`/api/teachers/student-registrations/${userId}/${action}`, { method: "POST" });
+        showAlert(document.getElementById("alertBox"), result.message, "success");
+        await loadPendingStudentRegistrations();
+        await updateTeacherNavBadge();
+    } catch (error) {
+        showAlert(document.getElementById("alertBox"), error.message, "error");
+    }
 }

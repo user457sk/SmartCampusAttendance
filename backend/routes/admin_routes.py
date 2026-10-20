@@ -14,9 +14,39 @@ from flask import Blueprint, jsonify, request
 from auth import admin_required, current_user_id
 from models import enrollment as enrollment_model
 from models import subject as subject_model
+from models import user as user_model
 from db import query
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
+
+
+@admin_bp.route("/registrations", methods=["GET"])
+@admin_required
+def pending_registrations():
+    return jsonify({
+        "success": True,
+        "registrations": user_model.get_pending_users(),
+    })
+
+
+@admin_bp.route("/registrations/<int:user_id>/approve", methods=["POST"])
+@admin_required
+def approve_registration(user_id):
+    user = user_model.get_user_by_id(user_id)
+    if not user or user.get("account_status") != "pending":
+        return jsonify({"error": "Pending registration not found."}), 404
+    user_model.update_account_status(user_id, "approved")
+    return jsonify({"success": True, "message": "Account approved."})
+
+
+@admin_bp.route("/registrations/<int:user_id>/reject", methods=["POST"])
+@admin_required
+def reject_registration(user_id):
+    user = user_model.get_user_by_id(user_id)
+    if not user or user.get("account_status") != "pending":
+        return jsonify({"error": "Pending registration not found."}), 404
+    user_model.update_account_status(user_id, "rejected")
+    return jsonify({"success": True, "message": "Account rejected."})
 
 
 # ============================================================
@@ -31,6 +61,7 @@ def admin_stats():
     subject_count = query("SELECT COUNT(*) AS total FROM subjects", one=True)["total"]
     total_enrollments = query("SELECT COUNT(*) AS total FROM enrollments", one=True)["total"]
     pending_approvals = query("SELECT COUNT(*) AS total FROM enrollments WHERE status = 'pending'", one=True)["total"]
+    pending_registrations = query("SELECT COUNT(*) AS total FROM users WHERE account_status = 'pending'", one=True)["total"]
     total_attendance = query("SELECT COUNT(*) AS total FROM attendance", one=True)["total"]
 
     return jsonify({
@@ -40,6 +71,7 @@ def admin_stats():
         "subjects_count": subject_count,
         "total_enrollments": total_enrollments,
         "pending_approvals": pending_approvals,
+        "pending_registrations": pending_registrations,
         "total_attendance": total_attendance,
     })
 

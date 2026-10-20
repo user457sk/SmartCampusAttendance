@@ -19,10 +19,17 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) NOT NULL
         CHECK (role IN ('student', 'teacher', 'admin')),
 
+    account_status VARCHAR(20) NOT NULL DEFAULT 'approved'
+        CHECK (account_status IN ('pending', 'approved', 'rejected')),
+
     profile_pic TEXT,
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS account_status VARCHAR(20) NOT NULL DEFAULT 'approved'
+    CHECK (account_status IN ('pending', 'approved', 'rejected'));
 
 
 -- ============================================================

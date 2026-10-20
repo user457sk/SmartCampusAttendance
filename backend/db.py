@@ -13,7 +13,7 @@ This file handles:
 - INSERT / UPDATE / DELETE
 - Flask request database connection
 - Database initialization & migrations (profile_pic, enrollments)
-- Demo data seeding
+- Administrator account initialization
 """
 
 import os
@@ -23,7 +23,15 @@ from psycopg.rows import dict_row
 from flask import g, has_app_context
 from werkzeug.security import generate_password_hash
 
-from config import DATABASE_URL, SCHEMA_PATH, BASE_DIR
+from config import (
+    ADMIN_EMAIL,
+    ADMIN_PASSWORD,
+    ADMIN_USERNAME,
+    DATABASE_URL,
+    SCHEMA_PATH,
+    BASE_DIR,
+    SMARTCAMPUS_ENV,
+)
 
 SQLITE_DB_PATH = os.path.join(BASE_DIR, "database", "smartcampus.db")
 _ENGINE = None  # "postgres" or "sqlite"
@@ -48,6 +56,11 @@ def get_engine():
             return _ENGINE
         except Exception as e:
             print(f"[SmartCampus DB] PostgreSQL connection error ({e}).")
+            if SMARTCAMPUS_ENV == "production":
+                raise RuntimeError(
+                    "PostgreSQL connection failed in production; "
+                    "refusing to fall back to local SQLite."
+                ) from e
             print(f"[SmartCampus DB] Falling back to local SQLite: {SQLITE_DB_PATH}")
 
     _ENGINE = "sqlite"
@@ -197,7 +210,7 @@ def execute(sql, params=()):
 # ============================================================
 
 def init_db():
-    """Create database tables, run migrations, and seed demo data."""
+    """Create database tables, run migrations, and initialize the administrator."""
     engine = get_engine()
 
     if engine == "postgres":
@@ -221,13 +234,13 @@ def init_db():
                 connection.rollback()
                 raise
 
-            seed_demo_data(connection)
+            ensure_admin_account(connection)
     else:
         init_sqlite_db()
 
 
 def init_sqlite_db():
-    """Ensure SQLite tables, migrations (profile_pic, enrollments), and seed data."""
+    """Ensure SQLite tables, migrations, and administrator account."""
     os.makedirs(os.path.dirname(SQLITE_DB_PATH), exist_ok=True)
     conn = sqlite3.connect(SQLITE_DB_PATH)
     conn.execute("PRAGMA foreign_keys = OFF")
@@ -250,6 +263,11 @@ def init_sqlite_db():
     user_cols = [r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()]
     if "profile_pic" not in user_cols:
         c.execute("ALTER TABLE users ADD COLUMN profile_pic TEXT")
+    if "account_status" not in user_cols:
+        c.execute(
+            "ALTER TABLE users ADD COLUMN account_status VARCHAR(20) NOT NULL "
+            "DEFAULT 'approved' CHECK (account_status IN ('pending', 'approved', 'rejected'))"
+        )
 
     # Students table
     c.execute("""
@@ -344,184 +362,56 @@ def init_sqlite_db():
     FROM attendance a
     """)
 
-    # Demo Admin
-    c.execute("SELECT id FROM users WHERE username = ?", ("admin",))
-    if not c.fetchone():
+    # Ensure the configured administrator exists and migrate the old demo login.
+    c.execute("SELECT id, email FROM users WHERE username = ?", (ADMIN_USERNAME,))
+    admin_user = c.fetchone()
+    if not admin_user:
         c.execute(
             "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)",
-            ("admin", "admin@smartcampus.edu", generate_password_hash("admin123"), "admin")
+            (ADMIN_USERNAME, ADMIN_EMAIL, generate_password_hash(ADMIN_PASSWORD), "admin")
         )
-
-    # Demo Teacher
-    c.execute("SELECT id FROM users WHERE username = ?", ("prof.sharma",))
-    teacher_user = c.fetchone()
-    if not teacher_user:
+    elif admin_user[1] != ADMIN_EMAIL:
         c.execute(
-            "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)",
-            ("prof.sharma", "sharma@smartcampus.edu", generate_password_hash("teacher123"), "teacher")
+            "UPDATE users SET email = ?, password_hash = ?, account_status = 'approved' WHERE id = ?",
+            (ADMIN_EMAIL, generate_password_hash(ADMIN_PASSWORD), admin_user[0])
         )
-        t_user_id = c.lastrowid
-        c.execute(
-            "INSERT INTO teachers (user_id, full_name, department, employee_id, phone) VALUES (?, ?, ?, ?, ?)",
-            (t_user_id, "Prof. Rajesh Sharma", "Computer Science", "T-1001", "9876500001")
-        )
-        teacher_id = c.lastrowid
     else:
-        c.execute("SELECT id FROM teachers WHERE user_id = ?", (teacher_user[0],))
-        t_row = c.fetchone()
-        teacher_id = t_row[0] if t_row else None
-
-    # Demo Student
-    c.execute("SELECT id FROM users WHERE username = ?", ("aarav",))
-    student_user = c.fetchone()
-    if not student_user:
         c.execute(
-            "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)",
-            ("aarav", "aarav@smartcampus.edu", generate_password_hash("student123"), "student")
+            "UPDATE users SET account_status = 'approved' WHERE id = ?",
+            (admin_user[0],)
         )
-        s_user_id = c.lastrowid
-        c.execute(
-            "INSERT INTO students (user_id, roll_number, full_name, course, branch, semester, phone) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (s_user_id, "CSE-2023-001", "Aarav Mehta", "B.Tech", "CSE", 3, "9876500002")
-        )
-        student_id = c.lastrowid
-    else:
-        c.execute("SELECT id FROM students WHERE user_id = ?", (student_user[0],))
-        s_row = c.fetchone()
-        student_id = s_row[0] if s_row else None
-
-    # Ensure Subjects & Teacher Assignment
-    c.execute("SELECT id FROM subjects WHERE subject_code = ?", ("CS301",))
-    s1 = c.fetchone()
-    if not s1:
-        c.execute(
-            "INSERT INTO subjects (subject_code, subject_name, course, branch, semester) VALUES (?, ?, ?, ?, ?)",
-            ("CS301", "Data Structures", "B.Tech", "CSE", 3)
-        )
-        s1_id = c.lastrowid
-    else:
-        s1_id = s1[0]
-
-    c.execute("SELECT id FROM subjects WHERE subject_code = ?", ("CS302",))
-    s2 = c.fetchone()
-    if not s2:
-        c.execute(
-            "INSERT INTO subjects (subject_code, subject_name, course, branch, semester) VALUES (?, ?, ?, ?, ?)",
-            ("CS302", "Database Systems", "B.Tech", "CSE", 3)
-        )
-        s2_id = c.lastrowid
-    else:
-        s2_id = s2[0]
-
-    if teacher_id:
-        c.execute("INSERT OR IGNORE INTO teacher_subjects (teacher_id, subject_id) VALUES (?, ?)", (teacher_id, s1_id))
-        c.execute("INSERT OR IGNORE INTO teacher_subjects (teacher_id, subject_id) VALUES (?, ?)", (teacher_id, s2_id))
-
-    if student_id:
-        c.execute("INSERT OR IGNORE INTO enrollments (student_id, subject_id, status) VALUES (?, ?, 'approved')", (student_id, s1_id))
-        c.execute("INSERT OR IGNORE INTO enrollments (student_id, subject_id, status) VALUES (?, ?, 'approved')", (student_id, s2_id))
 
     conn.commit()
     conn.close()
 
 
 # ============================================================
-# POSTGRES DEMO DATA
+# POSTGRES ADMIN ACCOUNT
 # ============================================================
 
-def seed_demo_data(connection):
-    """Seed demo accounts in PostgreSQL."""
+def ensure_admin_account(connection):
+    """Create or migrate the configured administrator in PostgreSQL."""
     try:
         with connection.cursor() as cursor:
-            # Admin
-            cursor.execute("SELECT id FROM users WHERE username = %s", ("admin",))
-            if not cursor.fetchone():
+            cursor.execute(
+                "SELECT id, email FROM users WHERE username = %s",
+                (ADMIN_USERNAME,)
+            )
+            admin_user = cursor.fetchone()
+            if admin_user is None:
                 cursor.execute(
                     "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, %s)",
-                    ("admin", "admin@smartcampus.edu", generate_password_hash("admin123"), "admin")
+                    (ADMIN_USERNAME, ADMIN_EMAIL, generate_password_hash(ADMIN_PASSWORD), "admin")
                 )
-
-            # Teacher
-            cursor.execute("SELECT id FROM users WHERE username = %s", ("prof.sharma",))
-            teacher_user = cursor.fetchone()
-            if teacher_user is None:
+            elif admin_user["email"] != ADMIN_EMAIL:
                 cursor.execute(
-                    "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, %s) RETURNING id",
-                    ("prof.sharma", "sharma@smartcampus.edu", generate_password_hash("teacher123"), "teacher")
+                    "UPDATE users SET email = %s, password_hash = %s, account_status = 'approved' WHERE id = %s",
+                    (ADMIN_EMAIL, generate_password_hash(ADMIN_PASSWORD), admin_user["id"])
                 )
-                t_user_id = cursor.fetchone()["id"]
-                cursor.execute(
-                    "INSERT INTO teachers (user_id, full_name, department, employee_id, phone) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                    (t_user_id, "Prof. Rajesh Sharma", "Computer Science", "T-1001", "9876500001")
-                )
-                teacher_id = cursor.fetchone()["id"]
             else:
-                cursor.execute("SELECT id FROM teachers WHERE user_id = %s", (teacher_user["id"],))
-                t_row = cursor.fetchone()
-                teacher_id = t_row["id"] if t_row else None
-
-            # Student
-            cursor.execute("SELECT id FROM users WHERE username = %s", ("aarav",))
-            student_user = cursor.fetchone()
-            if student_user is None:
                 cursor.execute(
-                    "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, %s) RETURNING id",
-                    ("aarav", "aarav@smartcampus.edu", generate_password_hash("student123"), "student")
-                )
-                s_user_id = cursor.fetchone()["id"]
-                cursor.execute(
-                    "INSERT INTO students (user_id, roll_number, full_name, course, branch, semester, phone) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-                    (s_user_id, "CSE-2023-001", "Aarav Mehta", "B.Tech", "CSE", 3, "9876500002")
-                )
-                student_id = cursor.fetchone()["id"]
-            else:
-                cursor.execute("SELECT id FROM students WHERE user_id = %s", (student_user["id"],))
-                s_row = cursor.fetchone()
-                student_id = s_row["id"] if s_row else None
-
-            # Subjects
-            cursor.execute("SELECT id FROM subjects WHERE subject_code = %s", ("CS301",))
-            s1 = cursor.fetchone()
-            if not s1:
-                cursor.execute(
-                    "INSERT INTO subjects (subject_code, subject_name, course, branch, semester) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                    ("CS301", "Data Structures", "B.Tech", "CSE", 3)
-                )
-                s1_id = cursor.fetchone()["id"]
-            else:
-                s1_id = s1["id"]
-
-            cursor.execute("SELECT id FROM subjects WHERE subject_code = %s", ("CS302",))
-            s2 = cursor.fetchone()
-            if not s2:
-                cursor.execute(
-                    "INSERT INTO subjects (subject_code, subject_name, course, branch, semester) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                    ("CS302", "Database Systems", "B.Tech", "CSE", 3)
-                )
-                s2_id = cursor.fetchone()["id"]
-            else:
-                s2_id = s2["id"]
-
-            if teacher_id and s1_id:
-                cursor.execute(
-                    "INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                    (teacher_id, s1_id)
-                )
-            if teacher_id and s2_id:
-                cursor.execute(
-                    "INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                    (teacher_id, s2_id)
-                )
-
-            if student_id and s1_id:
-                cursor.execute(
-                    "INSERT INTO enrollments (student_id, subject_id, status) VALUES (%s, %s, 'approved') ON CONFLICT DO NOTHING",
-                    (student_id, s1_id)
-                )
-            if student_id and s2_id:
-                cursor.execute(
-                    "INSERT INTO enrollments (student_id, subject_id, status) VALUES (%s, %s, 'approved') ON CONFLICT DO NOTHING",
-                    (student_id, s2_id)
+                    "UPDATE users SET account_status = 'approved' WHERE id = %s",
+                    (admin_user["id"],)
                 )
 
         connection.commit()

@@ -127,7 +127,7 @@ def migrate():
         # 1. USERS
         # ====================================================
 
-        print("1/6  Migrating users...")
+        print("1/7  Migrating users...")
 
         users = get_sqlite_rows(
             sqlite_cursor,
@@ -135,6 +135,12 @@ def migrate():
         )
 
         user_count = 0
+        user_columns = {
+            row[1]
+            for row in sqlite_cursor.execute(
+                "PRAGMA table_info(users)"
+            ).fetchall()
+        }
 
         for old_user in users:
 
@@ -152,10 +158,12 @@ def migrate():
                     email,
                     password_hash,
                     role,
+                    account_status,
+                    profile_pic,
                     created_at
                 )
                 VALUES
-                (%s, %s, %s, %s, %s)
+                (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT DO NOTHING
                 """,
                 (
@@ -163,6 +171,12 @@ def migrate():
                     old_user["email"],
                     old_user["password_hash"],
                     old_user["role"],
+                    old_user["account_status"]
+                    if "account_status" in user_columns
+                    else "approved",
+                    old_user["profile_pic"]
+                    if "profile_pic" in user_columns
+                    else None,
                     old_user["created_at"],
                 )
             )
@@ -218,7 +232,7 @@ def migrate():
         # 2. STUDENTS
         # ====================================================
 
-        print("2/6  Migrating students...")
+        print("2/7  Migrating students...")
 
         students = get_sqlite_rows(
             sqlite_cursor,
@@ -299,7 +313,7 @@ def migrate():
         # 3. TEACHERS
         # ====================================================
 
-        print("3/6  Migrating teachers...")
+        print("3/7  Migrating teachers...")
 
         teachers = get_sqlite_rows(
             sqlite_cursor,
@@ -376,7 +390,7 @@ def migrate():
         # 4. SUBJECTS
         # ====================================================
 
-        print("4/6  Migrating subjects...")
+        print("4/7  Migrating subjects...")
 
         subjects = get_sqlite_rows(
             sqlite_cursor,
@@ -441,7 +455,7 @@ def migrate():
         # ====================================================
 
         print(
-            "5/6  Migrating teacher-subject assignments..."
+            "5/7  Migrating teacher-subject assignments..."
         )
 
         teacher_subjects = get_sqlite_rows(
@@ -497,7 +511,7 @@ def migrate():
         # 6. ATTENDANCE
         # ====================================================
 
-        print("6/6  Migrating attendance...")
+        print("6/7  Migrating attendance...")
 
         attendance = get_sqlite_rows(
             sqlite_cursor,
@@ -561,6 +575,67 @@ def migrate():
         print(
             f"   Attendance records processed: "
             f"{attendance_count}"
+        )
+
+        # ====================================================
+        # 7. ENROLLMENTS
+        # ====================================================
+
+        print("7/7  Migrating enrollments...")
+
+        sqlite_tables = {
+            row[0]
+            for row in sqlite_cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+        enrollment_count = 0
+
+        if "enrollments" in sqlite_tables:
+            enrollments = get_sqlite_rows(
+                sqlite_cursor,
+                "enrollments"
+            )
+
+            for row in enrollments:
+                new_student_id = student_map.get(row["student_id"])
+                new_subject_id = subject_map.get(row["subject_id"])
+
+                if not new_student_id or not new_subject_id:
+                    continue
+
+                postgres_conn.execute(
+                    """
+                    INSERT INTO enrollments
+                    (
+                        student_id,
+                        subject_id,
+                        status,
+                        requested_at,
+                        reviewed_at,
+                        reviewed_by,
+                        rejection_reason
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT DO NOTHING
+                    """,
+                    (
+                        new_student_id,
+                        new_subject_id,
+                        row["status"],
+                        row["requested_at"],
+                        row["reviewed_at"],
+                        row["reviewed_by"],
+                        row["rejection_reason"],
+                    )
+                )
+
+                enrollment_count += 1
+
+            postgres_conn.commit()
+
+        print(
+            f"   Enrollment records processed: {enrollment_count}"
         )
 
         # ====================================================

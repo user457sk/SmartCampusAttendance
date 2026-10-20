@@ -67,8 +67,8 @@ function initRegister() {
         }
         try {
             await api("/api/auth/register", { method: "POST", body: payload });
-            showAlert(alertBox, "Registration successful! Redirecting to login…", "success");
-            setTimeout(() => { window.location.href = "/login.html"; }, 900);
+            showAlert(alertBox, "Registration submitted. You can log in after an administrator approves your teacher account, or an administrator/teacher approves your student account.", "success");
+            form.reset();
         } catch (err) {
             showAlert(alertBox, err.message, "error");
         }

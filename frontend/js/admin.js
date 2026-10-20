@@ -61,6 +61,7 @@ window.addEventListener("click", (e) => {
 
 async function loadAdminDashboard() {
     await loadStats();
+    await loadRegistrations();
     await loadEnrollments();
     await refreshCachedData();
 }
@@ -116,11 +117,12 @@ async function loadStats() {
             if (stTeachers) stTeachers.textContent = stats.teachers_count;
             if (stStudents) stStudents.textContent = stats.students_count;
             if (stSubjects) stSubjects.textContent = stats.subjects_count;
-            if (stPending) stPending.textContent = stats.pending_approvals;
+            const pendingCount = stats.pending_approvals + (stats.pending_registrations || 0);
+            if (stPending) stPending.textContent = pendingCount;
 
             if (pendingBadge) {
-                if (stats.pending_approvals > 0) {
-                    pendingBadge.textContent = stats.pending_approvals;
+                if (pendingCount > 0) {
+                    pendingBadge.textContent = pendingCount;
                     pendingBadge.style.display = "inline-block";
                 } else {
                     pendingBadge.style.display = "none";
@@ -129,6 +131,58 @@ async function loadStats() {
         }
     } catch (err) {
         console.error("Failed to load admin stats:", err);
+    }
+}
+
+async function loadRegistrations() {
+    const tableBox = document.getElementById("adminRegistrationsTable");
+    if (!tableBox) return;
+
+    try {
+        const data = await api("/api/admin/registrations");
+        const registrations = data.registrations || [];
+        if (!registrations.length) {
+            tableBox.innerHTML = '<p class="muted">No account registrations are waiting for approval.</p>';
+            return;
+        }
+        tableBox.innerHTML = `
+            <div style="overflow-x:auto">
+                <table class="table" style="width:100%;text-align:left;border-collapse:collapse">
+                    <thead><tr>
+                        <th style="padding:10px">Name</th>
+                        <th style="padding:10px">Username</th>
+                        <th style="padding:10px">Email</th>
+                        <th style="padding:10px">Role</th>
+                        <th style="padding:10px;text-align:center">Actions</th>
+                    </tr></thead>
+                    <tbody>${registrations.map(user => `
+                        <tr style="border-top:1px solid var(--line)">
+                            <td style="padding:10px">${esc(user.full_name || "—")}</td>
+                            <td style="padding:10px">${esc(user.username)}</td>
+                            <td style="padding:10px">${esc(user.email)}</td>
+                            <td style="padding:10px">${esc(user.role)}</td>
+                            <td style="padding:10px;text-align:center">
+                                <button class="btn btn-sm btn-primary" onclick="reviewRegistration(${user.id}, 'approve')">Approve</button>
+                                <button class="btn btn-sm btn-ghost" onclick="reviewRegistration(${user.id}, 'reject')" style="color:var(--danger)">Reject</button>
+                            </td>
+                        </tr>
+                    `).join("")}</tbody>
+                </table>
+            </div>`;
+    } catch (err) {
+        tableBox.innerHTML = `<p class="muted">Failed to load registrations: ${esc(err.message)}</p>`;
+    }
+}
+
+async function reviewRegistration(userId, action) {
+    const label = action === "approve" ? "approve" : "reject";
+    if (action === "reject" && !confirm("Reject this account registration?")) return;
+    try {
+        await api(`/api/admin/registrations/${userId}/${action}`, { method: "POST" });
+        await Promise.all([loadRegistrations(), loadStats()]);
+    } catch (err) {
+        const alertBox = document.getElementById("alertBox");
+        showAlert(alertBox, `Could not ${label} registration: ${err.message}`, "error");
     }
 }
 

@@ -46,7 +46,9 @@ def register():
         return jsonify({"error": "That email is already registered."}), 409
 
     # ---- create the login record -----------------------------------
-    user_id = user_model.create_user(username, email, password, role)
+    user_id = user_model.create_user(
+        username, email, password, role, account_status="pending"
+    )
 
     # ---- create the matching profile -------------------------------
     try:
@@ -95,7 +97,7 @@ def register():
         execute("DELETE FROM users WHERE id = ?", (user_id,))
         return jsonify({"error": str(err)}), 400
 
-    return jsonify({"message": "Registration successful. You can now log in.",
+    return jsonify({"message": "Registration submitted. An administrator must approve teacher accounts; an administrator or teacher must approve student accounts before login.",
                     "role": role}), 201
 
 
@@ -108,6 +110,11 @@ def login():
     user = user_model.get_user_by_username(username)
     if not user or not verify_password(password, user["password_hash"]):
         return jsonify({"error": "Invalid username or password."}), 401
+    if user.get("account_status", "approved") != "approved":
+        return jsonify({
+            "error": "Your account is pending approval." if user.get("account_status") == "pending"
+            else "Your account has not been approved."
+        }), 403
 
     redirect_url = "/student/dashboard.html"
     if user["role"] == "admin":
@@ -145,4 +152,3 @@ def me():
         "email": user.get("email"),
         "profile_pic": user.get("profile_pic"),
     })
-

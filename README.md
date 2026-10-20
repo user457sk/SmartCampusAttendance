@@ -101,22 +101,60 @@ python app.py
 On the first run the app automatically:
 * creates `database/smartcampus.db`
 * builds all tables from `database/database.sql`
-* seeds two demo accounts
+* creates the configured administrator account
 
 ### 3. Open the app
 Visit **http://localhost:5000** in your browser.
 
 ---
 
-## 🔑 Demo Accounts
+## ☁️ Deploy to Render + Supabase
 
-| Role | Username | Password |
-| --- | --- | --- |
-| Teacher | `prof.sharma` | `teacher123` |
-| Student | `aarav` | `student123` |
+The repository includes a Render Blueprint (`render.yaml`). The app requires
+PostgreSQL in production; it will refuse to silently use local SQLite if the
+database connection fails.
 
-The demo teacher already owns two subjects (*Data Structures*, *Database Systems*),
-and the demo student belongs to the matching class (B.Tech / CSE / Semester 3).
+1. Create a Supabase project and copy its PostgreSQL connection URI. Prefer the
+   **Session pooler** URI if the direct connection is not reachable from Render.
+2. In Supabase, keep the database password private. Do not commit it or paste it
+   into chat.
+3. Push this repository to GitHub, then in Render choose **New > Blueprint** and
+   select the repository. Render reads `render.yaml` and prompts for
+   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `DATABASE_URL`. Enter those values in
+   Render's private environment-variable form. `SMARTCAMPUS_SECRET` is generated
+   automatically.
+4. Deploy and wait for `/health` to report `status: ok`. The first service start
+   creates the PostgreSQL schema and configured administrator account.
+5. To migrate existing local SQLite records, first ensure the service has
+   initialized the Supabase schema. On your computer, set `DATABASE_URL` in the
+   root `.env` to the same Supabase URI, then run:
+
+   ```powershell
+   pip install -r requirements.txt
+   python backend/migrate_sqlite_to_supabase.py
+   ```
+
+   The migration leaves the local SQLite database unchanged and is safe to
+   rerun. It transfers user, student, teacher, subject, assignment, attendance,
+   and enrollment records. Profile image files are not transferred; Render's
+   default filesystem is temporary, so uploaded avatars need persistent storage
+   configured separately if they must survive redeploys.
+
+Never put `.env` or database credentials in GitHub. Change the administrator
+password in Render's environment settings if you ever need to rotate it.
+
+---
+
+## 🔑 Administrator and registration approval
+
+The initial administrator username is `admin` and the account email is
+`user457sk@gmail.com`. The initial password is `admin@457`; set `ADMIN_USERNAME`,
+`ADMIN_EMAIL`, and `ADMIN_PASSWORD` environment variables before deployment to
+choose your own values. The administrator password is stored as a hash.
+
+New student and teacher registrations start in a pending state and cannot log in
+until approved. Administrators can approve students and teachers; teachers can
+approve student registrations from **Student Approvals**.
 
 ---
 
@@ -124,7 +162,7 @@ and the demo student belongs to the matching class (B.Tech / CSE / Semester 3).
 
 | Table | Purpose | Key columns |
 | --- | --- | --- |
-| `users` | Authentication for both roles | `id` (PK), `username`, `email`, `password_hash`, `role` |
+| `users` | Authentication and approval state | `id` (PK), `username`, `email`, `password_hash`, `role`, `account_status` |
 | `students` | Student profile | `id` (PK), `user_id` (FK→users), `roll_number`, `course`, `branch`, `semester` |
 | `teachers` | Teacher profile | `id` (PK), `user_id` (FK→users), `department`, `employee_id` |
 | `subjects` | Subjects offered | `id` (PK), `subject_code`, `course`, `branch`, `semester` |
@@ -152,7 +190,11 @@ attendance** for the same student, subject and date.
 
 | Method | Endpoint | Access | Description |
 | --- | --- | --- | --- |
-| POST | `/api/auth/register` | public | Create student/teacher account |
+| POST | `/api/auth/register` | public | Submit student/teacher account for approval |
+| GET | `/api/admin/registrations` | admin | List pending registrations |
+| POST | `/api/admin/registrations/<id>/approve` | admin | Approve a registration |
+| GET | `/api/teachers/student-registrations` | teacher | List pending student registrations |
+| POST | `/api/teachers/student-registrations/<id>/approve` | teacher | Approve a student registration |
 | POST | `/api/auth/login` | public | Log in |
 | POST | `/api/auth/logout` | any | Log out |
 | GET | `/api/auth/me` | any | Current user |
@@ -178,7 +220,7 @@ attendance** for the same student, subject and date.
 # Login as teacher
 curl -c cookies.txt -X POST localhost:5000/api/auth/login \
      -H "Content-Type: application/json" \
-     -d '{"username":"prof.sharma","password":"teacher123"}'
+     -d '{"username":"your-approved-teacher-username","password":"your-password"}'
 
 # Mark attendance
 curl -b cookies.txt -X POST localhost:5000/api/attendance/mark \

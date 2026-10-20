@@ -74,7 +74,7 @@
                 <div style="flex:1;min-width:200px">
                     <h2>Administrator</h2>
                     <p class="muted">System-wide Access & Institutional Policy Oversight</p>
-                    <p class="muted" id="adminEmail" style="font-size:0.85rem;margin-top:4px">admin@smartcampus.edu</p>
+                    <p class="muted" id="adminEmail" style="font-size:0.85rem;margin-top:4px"></p>
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap">
                     <button class="btn btn-primary" onclick="openModal('modalAddSubject')" style="background:#0f172a">+ Add Subject</button>
@@ -119,6 +119,13 @@
 
             <!-- SECTION 1: ALL ENROLLMENTS & APPROVALS -->
             <div id="viewEnrollments" class="panel" style="margin-top:0">
+                <div style="padding:18px 20px;border-bottom:1px solid var(--line)">
+                    <h3>Account Registration Approvals</h3>
+                    <p class="muted" style="font-size:0.85rem;margin-top:2px">Approve teacher registrations and student registrations before they can log in.</p>
+                    <div class="panel-body" id="adminRegistrationsTable">
+                        <p class="muted">Loading registrations…</p>
+                    </div>
+                </div>
                 <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
                     <div>
                         <h3>Student Subject Approvals & Enrollments</h3>

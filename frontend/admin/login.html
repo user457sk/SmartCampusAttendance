@@ -11,12 +11,6 @@
         .auth-box h1 { color: #0f172a; }
         .btn-admin { background: #0f172a; color: #fff; }
         .btn-admin:hover { background: #1e293b; }
-        .btn-demo-autofill {
-            background: #f1f5f9; border: 1px dashed #94a3b8; color: #334155;
-            padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; cursor: pointer;
-            margin-top: 8px; font-weight: 600; display: inline-block;
-        }
-        .btn-demo-autofill:hover { background: #e2e8f0; color: #0f172a; }
     </style>
 </head>
 <body>
@@ -57,21 +51,11 @@
                     Switch portal: <a href="../login.html">Student Login</a> · <a href="../teacher/login.html">Teacher Login</a>
                 </p>
 
-                <div class="demo-note">
-                    <b>Admin Account:</b> <code>admin</code> / <code>admin123</code><br />
-                    <button type="button" class="btn-demo-autofill" onclick="autoFillAdmin()">⚡ Auto-fill Demo Admin</button>
-                </div>
             </div>
         </div>
     </div>
 
     <script src="../js/script.js"></script>
     <script src="../js/login.js"></script>
-    <script>
-        function autoFillAdmin() {
-            document.getElementById('username').value = 'admin';
-            document.getElementById('password').value = 'admin123';
-        }
-    </script>
 </body>
 </html>

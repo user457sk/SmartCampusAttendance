@@ -27,6 +27,7 @@ from models import teacher as teacher_model
 from models import subject as subject_model
 from models import student as student_model
 from models import attendance as attendance_model
+from models import user as user_model
 
 
 # IMPORTANT:
@@ -442,6 +443,43 @@ def subject_report(subject_id):
 # ============================================================
 # ENROLLMENT REQUESTS (ONLY FOR THIS TEACHER'S SUBJECTS)
 # ============================================================
+
+@teacher_bp.route("/student-registrations", methods=["GET"])
+@role_required("teacher")
+def pending_student_registrations():
+    return jsonify({
+        "success": True,
+        "registrations": user_model.get_pending_users(role="student"),
+    })
+
+
+@teacher_bp.route("/student-registrations/<int:user_id>/approve", methods=["POST"])
+@role_required("teacher")
+def approve_student_registration(user_id):
+    student_user = user_model.get_user_by_id(user_id)
+    if (
+        not student_user
+        or student_user.get("role") != "student"
+        or student_user.get("account_status") != "pending"
+    ):
+        return jsonify({"error": "Pending student registration not found."}), 404
+    user_model.update_account_status(user_id, "approved")
+    return jsonify({"success": True, "message": "Student account approved."})
+
+
+@teacher_bp.route("/student-registrations/<int:user_id>/reject", methods=["POST"])
+@role_required("teacher")
+def reject_student_registration(user_id):
+    student_user = user_model.get_user_by_id(user_id)
+    if (
+        not student_user
+        or student_user.get("role") != "student"
+        or student_user.get("account_status") != "pending"
+    ):
+        return jsonify({"error": "Pending student registration not found."}), 404
+    user_model.update_account_status(user_id, "rejected")
+    return jsonify({"success": True, "message": "Student account rejected."})
+
 
 @teacher_bp.route("/enrollment-requests", methods=["GET"])
 @role_required("teacher")

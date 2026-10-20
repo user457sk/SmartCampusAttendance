@@ -14,6 +14,12 @@ PORT = int(os.environ.get("PORT", "5000"))
 # Database
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
+# Initial administrator credentials. Override these through the environment
+# before deploying to a public environment.
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "user457sk@gmail.com").strip().lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin@457")
+
 # Database schema
 SCHEMA_PATH = os.path.join(BASE_DIR, "database", "database.sql")
 

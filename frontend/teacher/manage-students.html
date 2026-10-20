@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartCampus - Manage Students</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #202938; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 650px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #eef2f7; }
+    button { padding: 7px 10px; cursor: pointer; }
+    #message { margin: 16px 0; }
+  </style>
+</head>
+<body data-role="teacher">
+  <h1>Manage Students</h1>
+  <p>You can edit student profile details. Account deletion is disabled.</p>
+  <p id="message" role="status" aria-live="polite"></p>
+
+  <div class="table-wrap">
+    <table id="studentsTable">
+      <thead><tr>
+        <th>Roll No.</th><th>Name</th><th>Course</th>
+        <th>Branch</th><th>Semester</th><th>Phone</th>
+        <th>Email</th><th>Actions</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="/js/management.js"></script>
+</body>
+</html>

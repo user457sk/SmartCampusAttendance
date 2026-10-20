@@ -1,3 +1,4 @@
+```python
 """
 app.py
 ------
@@ -23,9 +24,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # BACKEND DIRECTORY
 # ============================================================
 
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -44,10 +43,7 @@ from config import (
     DATABASE_URL,
 )
 
-from db import (
-    init_db,
-    close_db,
-)
+from db import init_db, close_db
 
 
 # ============================================================
@@ -60,6 +56,7 @@ from routes.teacher_routes import teacher_bp
 from routes.attendance_routes import attendance_bp
 from routes.profile_routes import profile_bp
 from routes.admin_routes import admin_bp
+from routes.management_routes import management_bp
 
 
 # ============================================================
@@ -73,36 +70,25 @@ def create_app():
         static_folder=None,
     )
 
-
     # --------------------------------------------------------
     # Basic configuration
     # --------------------------------------------------------
 
     app.config["SECRET_KEY"] = SECRET_KEY
 
-    app.config["PERMANENT_SESSION_LIFETIME"] = (
-        SESSION_LIFETIME
-    )
+    app.config["PERMANENT_SESSION_LIFETIME"] = SESSION_LIFETIME
 
     app.config["JSON_SORT_KEYS"] = False
-
 
     # --------------------------------------------------------
     # Session security
     # --------------------------------------------------------
 
-    is_production = (
-        SMARTCAMPUS_ENV == "production"
-    )
+    is_production = SMARTCAMPUS_ENV == "production"
 
     app.config["SESSION_COOKIE_HTTPONLY"] = True
-
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-
-    app.config["SESSION_COOKIE_SECURE"] = (
-        is_production
-    )
-
+    app.config["SESSION_COOKIE_SECURE"] = is_production
 
     # --------------------------------------------------------
     # Reverse proxy support
@@ -116,13 +102,11 @@ def create_app():
         x_prefix=1,
     )
 
-
     # --------------------------------------------------------
     # Database cleanup
     # --------------------------------------------------------
 
     app.teardown_appcontext(close_db)
-
 
     # ========================================================
     # API BLUEPRINTS
@@ -134,69 +118,41 @@ def create_app():
         url_prefix="/api/auth",
     )
 
-
-    # --------------------------------------------------------
-    # STUDENT ROUTES
-    #
-    # IMPORTANT:
-    # student_routes.py already contains:
-    #
-    # url_prefix="/api/student"
-    #
-    # Therefore we DO NOT add another prefix here.
-    #
-    # Final URL:
-    # /api/student/dashboard
-    # --------------------------------------------------------
-
+    # Student routes
     app.register_blueprint(
-    student_bp,
-    url_prefix="/api/students"
-)
+        student_bp,
+        url_prefix="/api/students",
+    )
 
-
-    # --------------------------------------------------------
-    # TEACHER ROUTES
-    #
-    # teacher_routes.py uses routes registered under
-    # /api/teachers in the current project.
-    # --------------------------------------------------------
-
+    # Teacher routes
     app.register_blueprint(
         teacher_bp,
         url_prefix="/api/teachers",
     )
 
-
-    # --------------------------------------------------------
-    # ATTENDANCE ROUTES
-    # --------------------------------------------------------
-
+    # Attendance routes
     app.register_blueprint(
         attendance_bp,
         url_prefix="/api/attendance",
     )
 
-
-    # --------------------------------------------------------
-    # PROFILE PICTURE ROUTES
-    # --------------------------------------------------------
-
+    # Profile routes
     app.register_blueprint(
         profile_bp,
         url_prefix="/api/profile",
     )
 
-
-    # --------------------------------------------------------
-    # ADMIN ROUTES
-    # --------------------------------------------------------
-
+    # Admin routes
     app.register_blueprint(
         admin_bp,
         url_prefix="/api/admin",
     )
 
+    # Management routes
+    app.register_blueprint(
+        management_bp,
+        url_prefix="/api/management",
+    )
 
     # ========================================================
     # HEALTH CHECK
@@ -204,13 +160,11 @@ def create_app():
 
     @app.get("/health")
     def health():
-
         return jsonify({
             "status": "ok",
             "application": "SmartCampus",
             "environment": SMARTCAMPUS_ENV,
-        })
-
+        }), 200
 
     # ========================================================
     # HOME PAGE
@@ -218,12 +172,10 @@ def create_app():
 
     @app.get("/")
     def home():
-
         return send_from_directory(
             FRONTEND_DIR,
             "index.html",
         )
-
 
     # ========================================================
     # FRONTEND FILES
@@ -232,49 +184,30 @@ def create_app():
     @app.get("/<path:filename>")
     def frontend_files(filename):
 
-        requested_file = os.path.join(
-            FRONTEND_DIR,
-            filename,
-        )
-
-
-        frontend_root = os.path.abspath(
-            FRONTEND_DIR
-        )
-
+        frontend_root = os.path.abspath(FRONTEND_DIR)
 
         requested_path = os.path.abspath(
-            requested_file
+            os.path.join(FRONTEND_DIR, filename)
         )
 
-
-        # ----------------------------------------------------
-        # Security: prevent access outside frontend folder
-        # ----------------------------------------------------
-
-        if not requested_path.startswith(
-            frontend_root + os.sep
+        # Prevent access outside the frontend directory
+        if not (
+            requested_path.startswith(frontend_root + os.sep)
+            or requested_path == frontend_root
         ):
-
             return jsonify({
                 "error": "File not found"
             }), 404
 
-
-        if not os.path.isfile(
-            requested_path
-        ):
-
+        if not os.path.isfile(requested_path):
             return jsonify({
                 "error": "Page not found"
             }), 404
-
 
         return send_from_directory(
             FRONTEND_DIR,
             filename,
         )
-
 
     # ========================================================
     # 404 ERROR
@@ -282,11 +215,9 @@ def create_app():
 
     @app.errorhandler(404)
     def not_found(error):
-
         return jsonify({
             "error": "Resource not found"
         }), 404
-
 
     # ========================================================
     # 500 ERROR
@@ -294,11 +225,9 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_error(error):
-
         return jsonify({
             "error": "Internal server error"
         }), 500
-
 
     return app
 
@@ -316,8 +245,11 @@ app = create_app()
 
 def initialize_database():
     """
-    Initialize database (PostgreSQL / Supabase if available, SQLite fallback).
+    Initialize the configured database.
+    Supports PostgreSQL / Supabase and SQLite,
+    depending on backend/db.py configuration.
     """
+
     try:
         with app.app_context():
             init_db()
@@ -344,76 +276,34 @@ if __name__ == "__main__":
     print("=" * 60)
     print()
 
-
-    # --------------------------------------------------------
     # Initialize database
-    # --------------------------------------------------------
-
     database_ready = initialize_database()
 
-
     if not database_ready:
-
         print(
             "SmartCampus could not start because "
             "the database is not ready."
         )
-
-        print()
-
         sys.exit(1)
 
-
-    # --------------------------------------------------------
     # Server configuration
-    # --------------------------------------------------------
-
-    port = int(
-        os.environ.get(
-            "PORT",
-            5000,
-        )
-    )
-
+    port = int(os.environ.get("PORT", 5000))
 
     print()
-    print(
-        "SmartCampus backend running on:"
-    )
-
-    print(
-        f"http://127.0.0.1:{port}"
-    )
-
+    print("SmartCampus backend running on:")
+    print(f"http://127.0.0.1:{port}")
+    print()
+    print("Health check:")
+    print(f"http://127.0.0.1:{port}/health")
+    print()
+    print(f"Environment: {SMARTCAMPUS_ENV}")
+    print(f"Debug: {DEBUG}")
     print()
 
-    print(
-        "Health check:"
-    )
-
-    print(
-        f"http://127.0.0.1:{port}/health"
-    )
-
-    print()
-
-    print(
-        f"Environment: {SMARTCAMPUS_ENV}"
-    )
-
-    print(
-        f"Debug: {DEBUG}"
-    )
-
-    print()
-
-
-    # --------------------------------------------------------
     # Start Flask server
-    # --------------------------------------------------------
-
     app.run(
         host="0.0.0.0",
         port=port,
         debug=DEBUG,
     )
+```

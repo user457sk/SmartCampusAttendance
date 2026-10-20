@@ -1,0 +1,49 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartCampus - Manage Users</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #202938; }
+    h1, h2 { margin-bottom: 12px; }
+    .table-wrap { overflow-x: auto; margin-bottom: 32px; }
+    table { width: 100%; border-collapse: collapse; min-width: 650px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #eef2f7; }
+    button { padding: 7px 10px; margin: 2px; cursor: pointer; }
+    #message { margin: 16px 0; }
+  </style>
+</head>
+<body data-role="admin">
+  <h1>SmartCampus Admin - User Management</h1>
+  <p>Manage student and teacher profiles and accounts.</p>
+  <p id="message" role="status" aria-live="polite"></p>
+
+  <h2>Students</h2>
+  <div class="table-wrap">
+    <table id="studentsTable">
+      <thead><tr>
+        <th>Roll No.</th><th>Name</th><th>Course</th>
+        <th>Branch</th><th>Semester</th><th>Phone</th>
+        <th>Email</th><th>Actions</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Teachers</h2>
+  <div class="table-wrap">
+    <table id="teachersTable">
+      <thead><tr>
+        <th>Name</th><th>Employee ID</th><th>Department</th>
+        <th>Phone</th><th>Email</th><th>Actions</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="/js/management.js"></script>
+</body>
+</html>

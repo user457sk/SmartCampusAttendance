@@ -1,4 +1,4 @@
-
+```python
 from flask import Blueprint, jsonify
 from db import query, execute
 from auth import login_required, current_role, current_user_id, get_json
@@ -84,12 +84,13 @@ def list_teachers():
 @management_bp.route("/students/<int:student_id>", methods=["PUT"])
 @login_required
 def update_student(student_id):
-    role = current_role()
-    if role not in ("admin", "teacher"):
-        return fail("Access denied.", 403)
+    # Only admins can edit student profiles.
+    if current_role() != "admin":
+        return fail("Only admins can edit student profiles.", 403)
 
     data = get_json()
     student = get_student(student_id)
+
     if not student:
         return fail("Student not found.", 404)
 
@@ -111,38 +112,38 @@ def update_student(student_id):
     if not 1 <= semester <= 12:
         return fail("Semester must be between 1 and 12.")
 
+    username = clean(data.get("username"))
+    email = clean(data.get("email")).lower()
+
+    if not username or len(username) < 3:
+        return fail("Username must be at least 3 characters.")
+
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return fail("Enter a valid email address.")
+
+    duplicate = query("""
+        SELECT id FROM users
+        WHERE (username = ? OR email = ?) AND id <> ?
+    """, (username, email, student["user_id"]), one=True)
+
+    if duplicate:
+        return fail("Username or email is already in use.", 409)
+
     try:
         execute("""
             UPDATE students
             SET full_name = ?, roll_number = ?, course = ?,
                 branch = ?, semester = ?, phone = ?
             WHERE id = ?
-        """, (full_name, roll_number, course, branch,
-              semester, phone or None, student_id))
+        """, (
+            full_name, roll_number, course, branch,
+            semester, phone or None, student_id
+        ))
 
-        # Only admins can edit login account details.
-        if role == "admin":
-            username = clean(data.get("username"))
-            email = clean(data.get("email")).lower()
-
-            if not username or len(username) < 3:
-                return fail("Username must be at least 3 characters.")
-
-            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-                return fail("Enter a valid email address.")
-
-            duplicate = query("""
-                SELECT id FROM users
-                WHERE (username = ? OR email = ?) AND id <> ?
-            """, (username, email, student["user_id"]), one=True)
-
-            if duplicate:
-                return fail("Username or email is already in use.", 409)
-
-            execute("""
-                UPDATE users SET username = ?, email = ?
-                WHERE id = ? AND role = 'student'
-            """, (username, email, student["user_id"]))
+        execute("""
+            UPDATE users SET username = ?, email = ?
+            WHERE id = ? AND role = 'student'
+        """, (username, email, student["user_id"]))
 
     except Exception:
         return fail(
@@ -160,6 +161,7 @@ def update_teacher(teacher_id):
         return fail("Only admins can edit teacher profiles.", 403)
 
     teacher = get_teacher(teacher_id)
+
     if not teacher:
         return fail("Teacher not found.", 404)
 
@@ -172,7 +174,9 @@ def update_teacher(teacher_id):
     email = clean(data.get("email")).lower()
 
     if not all([full_name, department, employee_id, username]):
-        return fail("Name, department, employee ID and username are required.")
+        return fail(
+            "Name, department, employee ID and username are required."
+        )
 
     if len(username) < 3:
         return fail("Username must be at least 3 characters.")
@@ -201,7 +205,10 @@ def update_teacher(teacher_id):
             UPDATE teachers
             SET full_name = ?, department = ?, employee_id = ?, phone = ?
             WHERE id = ?
-        """, (full_name, department, employee_id, phone or None, teacher_id))
+        """, (
+            full_name, department, employee_id,
+            phone or None, teacher_id
+        ))
 
         execute("""
             UPDATE users SET username = ?, email = ?
@@ -220,7 +227,7 @@ def update_teacher(teacher_id):
 )
 @login_required
 def delete_account(role, user_id):
-    # No teacher can delete accounts. Only admin can.
+    # Only admins can delete student or teacher accounts.
     if current_role() != "admin":
         return fail("Only admins can delete accounts.", 403)
 
@@ -237,19 +244,24 @@ def delete_account(role, user_id):
     if not user or user["role"] != role:
         return fail("Account not found.", 404)
 
-    profile = query(
-        "SELECT id FROM students WHERE user_id = ?",
-        (user_id,), one=True
-    ) if role == "student" else query(
-        "SELECT id FROM teachers WHERE user_id = ?",
-        (user_id,), one=True
+    profile = (
+        query(
+            "SELECT id FROM students WHERE user_id = ?",
+            (user_id,),
+            one=True
+        )
+        if role == "student"
+        else query(
+            "SELECT id FROM teachers WHERE user_id = ?",
+            (user_id,),
+            one=True
+        )
     )
 
     if not profile:
         return fail("Profile not found. No account was deleted.", 404)
 
     try:
-        # Database foreign-key rules determine related-record deletion.
         execute(
             "DELETE FROM users WHERE id = ? AND role = ?",
             (user_id, role)
@@ -262,3 +274,4 @@ def delete_account(role, user_id):
         )
 
     return jsonify({"message": "Account deleted successfully."})
+```

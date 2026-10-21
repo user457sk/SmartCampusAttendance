@@ -16,7 +16,7 @@ GET /api/students/subject-attendance
 GET /api/students/monthly-attendance
 """
 
-from flask import Blueprint, jsonify, session
+from flask import Blueprint, jsonify, session, request
 
 from db import query
 
@@ -103,6 +103,134 @@ def student_profile():
     return jsonify({
         "success": True,
         "student": student
+    })
+
+
+@student_bp.route("/profile", methods=["PUT", "PATCH"])
+def update_student_own_profile():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "error": "Student not logged in"}), 401
+
+    student = get_current_student()
+    if not student or not student.get("student_id"):
+        return jsonify({"success": False, "error": "Student profile not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+
+    full_name = (data.get("full_name") or "").strip()
+    roll_number = (data.get("roll_number") or "").strip().upper()
+    course = (data.get("course") or "").strip()
+    branch = (data.get("branch") or "").strip().upper()
+    semester = data.get("semester")
+    phone = (data.get("phone") or "").strip()
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+
+    if not full_name:
+        return jsonify({"success": False, "error": "Full name is required."}), 400
+    if not roll_number:
+        return jsonify({"success": False, "error": "Roll number is required."}), 400
+    if not course:
+        return jsonify({"success": False, "error": "Course is required."}), 400
+    if not branch:
+        return jsonify({"success": False, "error": "Branch is required."}), 400
+    if not username or len(username) < 3:
+        return jsonify({"success": False, "error": "Username must be at least 3 characters."}), 400
+    if not email or "@" not in email or "." not in email:
+        return jsonify({"success": False, "error": "Valid email is required."}), 400
+
+    try:
+        semester = int(semester)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Semester must be a valid number."}), 400
+
+    if semester < 1 or semester > 12:
+        return jsonify({"success": False, "error": "Semester must be between 1 and 12."}), 400
+
+    from models import user as user_model
+
+    existing_user = user_model.get_user_by_username(username)
+    if existing_user and existing_user["id"] != user_id:
+        return jsonify({"success": False, "error": "Username is already in use."}), 409
+
+    existing_email = user_model.get_user_by_email(email)
+    if existing_email and existing_email["id"] != user_id:
+        return jsonify({"success": False, "error": "Email is already in use."}), 409
+
+    existing_roll = query(
+        """
+        SELECT id FROM students
+        WHERE roll_number = ? AND id <> ?
+        """,
+        (roll_number, student["student_id"]),
+        one=True,
+    )
+    if existing_roll:
+        return jsonify({"success": False, "error": "Roll number is already in use."}), 409
+
+    try:
+        query(
+            """
+            UPDATE students
+            SET full_name = ?, roll_number = ?, course = ?, branch = ?, semester = ?, phone = ?
+            WHERE id = ?
+            """,
+            (full_name, roll_number, course, branch, semester, phone or None, student["student_id"]),
+        )
+        query(
+            """
+            UPDATE users
+            SET username = ?, email = ?
+            WHERE id = ?
+            """,
+            (username, email, user_id),
+        )
+    except Exception as exc:
+        return jsonify({"success": False, "error": f"Update failed: {str(exc)}"}), 400
+
+    return jsonify({
+        "success": True,
+        "message": "Profile updated successfully.",
+        "student": {
+            "user_id": user_id,
+            "username": username,
+            "email": email,
+            "full_name": full_name,
+            "roll_number": roll_number,
+            "course": course,
+            "branch": branch,
+            "semester": semester,
+            "phone": phone,
+            "profile_pic": student.get("profile_pic"),
+        },
+    })
+
+
+@student_bp.route("/account", methods=["DELETE"])
+def delete_student_own_account():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "error": "Student not logged in"}), 401
+
+    student = get_current_student()
+    if not student or not student.get("student_id"):
+        return jsonify({"success": False, "error": "Student profile not found"}), 404
+
+    from db import execute
+
+    try:
+        execute("DELETE FROM attendance WHERE student_id = ?", (student["student_id"],))
+        execute("DELETE FROM enrollments WHERE student_id = ?", (student["student_id"],))
+        execute("DELETE FROM students WHERE id = ?", (student["student_id"],))
+        execute("DELETE FROM users WHERE id = ?", (user_id,))
+        session.clear()
+    except Exception as exc:
+        return jsonify({"success": False, "error": f"Delete failed: {str(exc)}"}), 400
+
+    return jsonify({
+        "success": True,
+        "message": "Your account has been deleted successfully.",
     })
 
 
@@ -887,3 +1015,15 @@ def student_enrollments_list():
     from models import enrollment as enrollment_model
     records = enrollment_model.get_student_enrollments(student_id)
     return jsonify({"success": True, "enrollments": records})
+
+
+# ============================================================
+# OPTIONAL: FORM-STYLE PROFILE UPDATE HELPER FOR FRONTEND
+# ============================================================
+
+@student_bp.route("/profile/update", methods=["POST"])
+def student_update_profile_form():
+    return update_student_own_profile()
+
+
+# END

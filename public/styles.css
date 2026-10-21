@@ -1,432 +1,458 @@
-* {
-  box-sizing: border-box;
+const state = {
+  user: null,
+  students: [],
+  records: [],
+  summary: null,
+  selectedDate: getTodayDate(),
+  selectedTime: '09:00',
+};
+
+const refs = {
+  authContainer: document.getElementById('authContainer'),
+  appContainer: document.getElementById('appContainer'),
+  loginForm: document.getElementById('loginForm'),
+  signupForm: document.getElementById('signupForm'),
+  logoutBtn: document.getElementById('logoutBtn'),
+  currentUserChip: document.getElementById('currentUserChip'),
+  calendarTitle: document.getElementById('calendarTitle'),
+  calendarGrid: document.getElementById('calendarGrid'),
+  selectedDate: document.getElementById('selectedDate'),
+  selectedTime: document.getElementById('selectedTime'),
+  subjectFilter: document.getElementById('subjectFilter'),
+  studentTableBody: document.getElementById('studentTableBody'),
+  attendanceForm: document.getElementById('attendanceForm'),
+  studentForm: document.getElementById('studentForm'),
+  recordsList: document.getElementById('recordsList'),
+  summaryStats: document.getElementById('summaryStats'),
+  selectedContext: document.getElementById('selectedContext'),
+  attendanceDate: document.getElementById('attendanceDate'),
+  attendanceTime: document.getElementById('attendanceTime'),
+  subjectName: document.getElementById('subjectName'),
+  teacherName: document.getElementById('teacherName'),
+  markAllPresent: document.getElementById('markAllPresent'),
+  markAllAbsent: document.getElementById('markAllAbsent'),
+  exportCsv: document.getElementById('exportCsv'),
+  printPdf: document.getElementById('printPdf'),
+};
+
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let draftEntries = [];
+
+attachEvents();
+checkAuth();
+
+function attachEvents() {
+  refs.loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Login failed.');
+
+      state.user = result.user;
+      refs.loginForm.reset();
+      await loadDashboardData();
+      showApp();
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  refs.signupForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const role = document.getElementById('signupRole').value;
+
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Signup failed.');
+
+      state.user = result.user;
+      refs.signupForm.reset();
+      await loadDashboardData();
+      showApp();
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  refs.logoutBtn.addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    state.user = null;
+    refs.authContainer.classList.remove('hidden');
+    refs.appContainer.classList.add('hidden');
+  });
+
+  refs.selectedDate.addEventListener('input', () => {
+    state.selectedDate = refs.selectedDate.value || getTodayDate();
+    refs.attendanceDate.value = state.selectedDate;
+    refreshDraftFromSelectedSession();
+    renderCalendar();
+    renderRecords();
+  });
+
+  refs.attendanceDate.addEventListener('input', () => {
+    state.selectedDate = refs.attendanceDate.value || getTodayDate();
+    refs.selectedDate.value = state.selectedDate;
+    refreshDraftFromSelectedSession();
+    renderCalendar();
+    renderRecords();
+  });
+
+  refs.selectedTime.addEventListener('input', () => {
+    state.selectedTime = refs.selectedTime.value || '09:00';
+    refs.attendanceTime.value = state.selectedTime;
+    refreshDraftFromSelectedSession();
+    renderRecords();
+  });
+
+  refs.attendanceTime.addEventListener('input', () => {
+    state.selectedTime = refs.attendanceTime.value || '09:00';
+    refs.selectedTime.value = state.selectedTime;
+    refreshDraftFromSelectedSession();
+    renderRecords();
+  });
+
+  refs.subjectFilter.addEventListener('input', renderRecords);
+
+  refs.attendanceForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const date = refs.attendanceDate.value;
+    const time = refs.attendanceTime.value;
+    const subject = refs.subjectName.value.trim();
+    const teacher = refs.teacherName.value.trim();
+
+    if (!date || !time || !subject || !teacher) {
+      alert('Please fill all required fields.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date,
+          time,
+          subject,
+          teacher,
+          entries: draftEntries,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Could not save attendance.');
+
+      await loadDashboardData();
+      refreshDraftFromSelectedSession();
+      renderStudentTable();
+      renderRecords();
+      renderSummary();
+      alert('Attendance saved successfully.');
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  refs.markAllPresent.addEventListener('click', () => applyStatusToAll('present'));
+  refs.markAllAbsent.addEventListener('click', () => applyStatusToAll('absent'));
+  refs.exportCsv.addEventListener('click', () => window.open('/api/export/csv', '_blank'));
+  refs.printPdf.addEventListener('click', () => window.print());
+
+  refs.studentForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const name = document.getElementById('studentNameInput').value.trim();
+    const rollNo = document.getElementById('studentRollInput').value.trim();
+    const className = document.getElementById('studentClassInput').value.trim();
+
+    if (!name || !rollNo || !className) {
+      alert('Please fill all student details.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, rollNo, className }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Could not add student.');
+
+      refs.studentForm.reset();
+      await loadDashboardData();
+      refreshDraftFromSelectedSession();
+      renderStudentTable();
+      renderSummary();
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+  document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
 }
 
-:root {
-  --bg: #f5f7fb;
-  --surface: #ffffff;
-  --surface-alt: #eef4ff;
-  --primary: #2650d8;
-  --primary-dark: #1a3ba8;
-  --accent: #0fbf8d;
-  --warning: #f08826;
-  --danger: #e14949;
-  --text: #1f2937;
-  --muted: #67748a;
-  --border: #dfe7f5;
-  --shadow: 0 12px 28px rgba(31, 41, 55, 0.08);
-}
+async function checkAuth() {
+  try {
+    const response = await fetch('/api/auth/me');
+    if (!response.ok) {
+      showAuth();
+      return;
+    }
 
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: linear-gradient(180deg, #edf3ff 0%, var(--bg) 100%);
-  color: var(--text);
-}
-
-button,
-input {
-  font: inherit;
-}
-
-.app-shell {
-  max-width: 1500px;
-  margin: 0 auto;
-  padding: 28px 18px 40px;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 22px;
-}
-
-.eyebrow {
-  margin: 0;
-  font-size: 12px;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-}
-
-h1,
-h2,
-p {
-  margin-top: 0;
-}
-
-h1 {
-  margin-bottom: 0;
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
-}
-
-.role-switch {
-  display: inline-flex;
-  background: var(--surface);
-  padding: 6px;
-  border-radius: 999px;
-  box-shadow: var(--shadow);
-}
-
-.role-btn,
-.primary-btn,
-.secondary-btn,
-.tiny-btn {
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.role-btn {
-  background: transparent;
-  color: var(--muted);
-  padding: 10px 16px;
-  font-weight: 700;
-}
-
-.role-btn.active {
-  background: var(--primary);
-  color: #fff;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 320px;
-  gap: 22px;
-}
-
-.sidebar,
-.main-content {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: var(--shadow);
-}
-
-.calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.calendar-title {
-  font-weight: 700;
-  color: var(--primary-dark);
-}
-
-.tiny-btn {
-  background: var(--surface-alt);
-  color: var(--primary);
-  width: 32px;
-  height: 32px;
-  font-size: 0.9rem;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-  text-align: center;
-}
-
-.calendar-weekday,
-.day {
-  padding: 10px 0;
-  border-radius: 10px;
-  font-size: 0.8rem;
-}
-
-.calendar-weekday {
-  color: var(--muted);
-  font-weight: 700;
-  background: #f8faff;
-}
-
-.day {
-  border: 1px solid transparent;
-  background: #f7f9fd;
-  cursor: pointer;
-  position: relative;
-}
-
-.day:hover {
-  border-color: var(--primary);
-}
-
-.day.selected {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-
-.day.outside {
-  opacity: 0.35;
-}
-
-.day.today {
-  box-shadow: inset 0 0 0 2px var(--accent);
-}
-
-.quick-panel label,
-.attendance-form label,
-.stacked-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.quick-panel,
-.stacked-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-input {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--text);
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.pill {
-  display: inline-block;
-  background: var(--surface-alt);
-  color: var(--primary-dark);
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 7px 10px;
-  border-radius: 999px;
-}
-
-.fields-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.attendance-actions,
-.export-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.primary-btn,
-.secondary-btn {
-  padding: 10px 16px;
-  font-weight: 700;
-}
-
-.primary-btn {
-  background: var(--primary);
-  color: #fff;
-}
-
-.primary-btn:hover {
-  background: var(--primary-dark);
-}
-
-.secondary-btn {
-  background: #edf4ff;
-  color: var(--primary-dark);
-}
-
-.secondary-btn.warning {
-  background: #fff5ee;
-  color: var(--warning);
-}
-
-.student-table-wrap {
-  margin-top: 20px;
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 500px;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 12px 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-th {
-  color: var(--muted);
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.status-group {
-  display: inline-flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.status-btn {
-  border: 1px solid var(--border);
-  background: #fff;
-  padding: 6px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.status-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-
-.status-btn.late.active {
-  background: var(--warning);
-  border-color: var(--warning);
-}
-
-.status-btn.absent.active {
-  background: var(--danger);
-  border-color: var(--danger);
-}
-
-.records-list {
-  display: grid;
-  gap: 14px;
-}
-
-.record-item {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
-  background: linear-gradient(180deg, #fbfcff 0%, #f5f8ff 100%);
-}
-
-.record-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.record-title {
-  font-weight: 700;
-}
-
-.record-meta {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.summary-stats {
-  display: grid;
-  gap: 14px;
-}
-
-.stat-box {
-  background: var(--surface-alt);
-  border-radius: 14px;
-  padding: 12px 14px;
-}
-
-.stat-box .label {
-  color: var(--muted);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.stat-box .value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin-top: 4px;
-}
-
-.empty-state {
-  color: var(--muted);
-  text-align: center;
-  padding: 30px 12px;
-  border: 1px dashed var(--border);
-  border-radius: 14px;
-}
-
-@media (max-width: 1200px) {
-  .layout {
-    grid-template-columns: 1fr;
+    const result = await response.json();
+    state.user = result.user;
+    await loadDashboardData();
+    showApp();
+  } catch (error) {
+    showAuth();
   }
 }
 
-@media (max-width: 700px) {
-  .fields-row {
-    grid-template-columns: 1fr;
-  }
+async function loadDashboardData() {
+  const [studentsResponse, recordsResponse, summaryResponse] = await Promise.all([
+    fetch('/api/students'),
+    fetch('/api/records'),
+    fetch('/api/summary'),
+  ]);
 
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
+  state.students = await studentsResponse.json();
+  state.records = await recordsResponse.json();
+  state.summary = await summaryResponse.json();
+
+  refs.currentUserChip.textContent = state.user ? `${state.user.name} (${state.user.role})` : 'Guest';
+  renderStudentTable();
+  renderSummary();
+  renderRecords();
+  renderCalendar();
+}
+
+function showApp() {
+  refs.authContainer.classList.add('hidden');
+  refs.appContainer.classList.remove('hidden');
+  refs.selectedDate.value = state.selectedDate;
+  refs.attendanceDate.value = state.selectedDate;
+  refs.attendanceTime.value = state.selectedTime;
+  refs.selectedTime.value = state.selectedTime;
+  refs.teacherName.value = state.user?.name || '';
+  refreshDraftFromSelectedSession();
+}
+
+function showAuth() {
+  refs.authContainer.classList.remove('hidden');
+  refs.appContainer.classList.add('hidden');
+}
+
+function refreshDraftFromSelectedSession() {
+  const date = refs.attendanceDate.value || state.selectedDate;
+  const time = refs.attendanceTime.value || state.selectedTime;
+  const subject = refs.subjectName.value.trim() || 'Mathematics';
+  const teacher = refs.teacherName.value.trim() || state.user?.name || 'Teacher';
+
+  refs.selectedContext.textContent = `${date} • ${time}`;
+
+  const matchingRecord = state.records.find(
+    (record) => record.date === date && record.time === time && record.subject === subject && record.teacher === teacher,
+  );
+
+  const map = new Map((matchingRecord?.entries || []).map((entry) => [entry.studentId, entry.status]));
+  draftEntries = state.students.map((student) => ({
+    studentId: student.id,
+    status: map.get(student.id) || 'absent',
+  }));
+
+  renderStudentTable();
+}
+
+function renderCalendar() {
+  const monthStart = new Date(currentYear, currentMonth, 1);
+  const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  refs.calendarTitle.textContent = monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  refs.calendarGrid.innerHTML = '';
+
+  weekdayNames.forEach((day) => {
+    const cell = document.createElement('div');
+    cell.className = 'calendar-weekday';
+    cell.textContent = day;
+    refs.calendarGrid.appendChild(cell);
+  });
+
+  const startDay = new Date(currentYear, currentMonth, 1).getDay();
+  const firstCalendarDay = new Date(currentYear, currentMonth, 1 - startDay);
+
+  for (let i = 0; i < 42; i += 1) {
+    const date = new Date(firstCalendarDay);
+    date.setDate(firstCalendarDay.getDate() + i);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'day';
+    button.textContent = date.getDate();
+
+    const dateKey = formatIsoDate(date);
+    if (date.getMonth() !== currentMonth) button.classList.add('outside');
+    if (dateKey === getTodayDate()) button.classList.add('today');
+    if (dateKey === state.selectedDate) button.classList.add('selected');
+
+    button.addEventListener('click', () => {
+      state.selectedDate = dateKey;
+      refs.selectedDate.value = state.selectedDate;
+      refs.attendanceDate.value = state.selectedDate;
+      refreshDraftFromSelectedSession();
+      renderCalendar();
+      renderRecords();
+    });
+
+    refs.calendarGrid.appendChild(button);
   }
 }
 
-@media print {
-  body {
-    background: #fff;
+function renderStudentTable() {
+  if (!state.students.length) {
+    refs.studentTableBody.innerHTML = '<tr><td colspan="4">No students available.</td></tr>';
+    return;
   }
 
-  .role-switch,
-  .attendance-form,
-  .export-actions,
-  .sidebar.right-panel,
-  .sidebar:first-child,
-  .student-table-wrap,
-  .quick-panel,
-  .status-group,
-  .section-head .pill,
-  #studentForm {
-    display: none !important;
+  refs.studentTableBody.innerHTML = state.students.map((student) => {
+    const entry = draftEntries.find((item) => item.studentId === student.id) || { status: 'absent' };
+    const status = entry.status;
+
+    return `
+      <tr>
+        <td>${student.rollNo}</td>
+        <td>${student.name}</td>
+        <td>${student.className}</td>
+        <td>
+          <div class="status-group">
+            <button type="button" class="status-btn present ${status === 'present' ? 'active' : ''}" data-student-id="${student.id}" data-status="present">Present</button>
+            <button type="button" class="status-btn late ${status === 'late' ? 'active' : ''}" data-student-id="${student.id}" data-status="late">Late</button>
+            <button type="button" class="status-btn absent ${status === 'absent' ? 'active' : ''}" data-student-id="${student.id}" data-status="absent">Absent</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  refs.studentTableBody.querySelectorAll('.status-btn').forEach((button) => {
+    button.addEventListener('click', () => updateDraftStatus(button.dataset.studentId, button.dataset.status));
+  });
+}
+
+function updateDraftStatus(studentId, status) {
+  const entry = draftEntries.find((item) => item.studentId === studentId);
+  if (entry) {
+    entry.status = status;
+  } else {
+    draftEntries.push({ studentId, status });
+  }
+  renderStudentTable();
+}
+
+function applyStatusToAll(status) {
+  draftEntries = state.students.map((student) => ({ studentId: student.id, status }));
+  renderStudentTable();
+}
+
+function renderRecords() {
+  const filterText = refs.subjectFilter.value.trim().toLowerCase();
+  const selectedDate = refs.selectedDate.value || state.selectedDate;
+  const selectedTime = refs.selectedTime.value || state.selectedTime;
+
+  const filtered = state.records.filter((record) => {
+    const matchesDate = record.date === selectedDate;
+    const matchesTime = record.time === selectedTime;
+    const matchesSubject = !filterText || record.subject.toLowerCase().includes(filterText);
+    return matchesDate && matchesTime && matchesSubject;
+  });
+
+  if (!filtered.length) {
+    refs.recordsList.innerHTML = '<div class="empty-state">No attendance record found for this date and time.</div>';
+    return;
   }
 
-  .app-shell {
-    max-width: 100%;
-    padding: 0;
-  }
+  refs.recordsList.innerHTML = filtered.map((record) => {
+    const counts = getCounts(record.entries);
+    return `
+      <div class="record-item">
+        <div class="record-head">
+          <div>
+            <div class="record-title">${record.subject}</div>
+            <div class="record-meta">${record.teacher} • ${record.date} • ${record.time}</div>
+          </div>
+          <div class="record-meta">P: ${counts.present} | A: ${counts.absent} | L: ${counts.late}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
-  .layout {
-    grid-template-columns: 1fr;
-  }
+function renderSummary() {
+  const summary = state.summary || { totalStudents: 0, present: 0, absent: 0, late: 0 };
 
-  .card {
-    box-shadow: none;
-    border: 1px solid #ddd;
-  }
+  refs.summaryStats.innerHTML = `
+    <div class="stat-box">
+      <div class="label">Total Students</div>
+      <div class="value">${summary.totalStudents}</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Present</div>
+      <div class="value">${summary.present}</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Absent</div>
+      <div class="value">${summary.absent}</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Late</div>
+      <div class="value">${summary.late}</div>
+    </div>
+  `;
+}
+
+function changeMonth(delta) {
+  const nextDate = new Date(currentYear, currentMonth + delta, 1);
+  currentMonth = nextDate.getMonth();
+  currentYear = nextDate.getFullYear();
+  renderCalendar();
+}
+
+function getCounts(entries = []) {
+  const summary = { present: 0, absent: 0, late: 0 };
+  entries.forEach((entry) => {
+    if (summary[entry.status] !== undefined) summary[entry.status] += 1;
+  });
+  return summary;
+}
+
+function formatIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayDate() {
+  return formatIsoDate(new Date());
 }

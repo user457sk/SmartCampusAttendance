@@ -1,4 +1,3 @@
-```python
 from flask import Blueprint, jsonify
 from db import query, execute
 from auth import login_required, current_role, current_user_id, get_json
@@ -274,4 +273,4 @@ def delete_account(role, user_id):
         )
 
     return jsonify({"message": "Account deleted successfully."})
-```
+    

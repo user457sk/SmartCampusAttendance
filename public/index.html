@@ -7,16 +7,62 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <div id="authContainer" class="auth-shell">
+      <div class="auth-card">
+        <div class="auth-header">
+          <p class="eyebrow">Smart Campus</p>
+          <h1>Sign in</h1>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+          <label>
+            Email
+            <input type="email" id="loginEmail" required placeholder="teacher@school.com" />
+          </label>
+          <label>
+            Password
+            <input type="password" id="loginPassword" required placeholder="********" />
+          </label>
+          <button type="submit" class="primary-btn full">Login</button>
+        </form>
+
+        <div class="divider"><span>or</span></div>
+
+        <form id="signupForm" class="auth-form">
+          <label>
+            Full Name
+            <input type="text" id="signupName" placeholder="Teacher Name" required />
+          </label>
+          <label>
+            Email
+            <input type="email" id="signupEmail" placeholder="teacher@school.com" required />
+          </label>
+          <label>
+            Password
+            <input type="password" id="signupPassword" placeholder="Minimum 6 chars" required />
+          </label>
+          <label>
+            Role
+            <select id="signupRole">
+              <option value="teacher">Teacher</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <button type="submit" class="secondary-btn full">Create Account</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="appContainer" class="app-shell hidden">
       <header class="topbar">
         <div>
           <p class="eyebrow">Smart Campus</p>
           <h1>Attendance Dashboard</h1>
         </div>
-        <div class="role-switch" aria-label="role selector">
-          <button type="button" class="role-btn active" data-role="teacher">Teacher</button>
-          <button type="button" class="role-btn" data-role="admin">Admin</button>
-          <button type="button" class="role-btn" data-role="student">Student</button>
+
+        <div class="top-actions">
+          <div class="user-chip" id="currentUserChip">Teacher</div>
+          <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
         </div>
       </header>
 
@@ -77,9 +123,9 @@
               </div>
 
               <div class="attendance-actions">
-                <button type="button" id="markAllPresent" class="secondary-btn">Mark All Present</button>
-                <button type="button" id="markAllAbsent" class="secondary-btn warning">Mark All Absent</button>
-                <button type="submit" class="primary-btn">Save Attendance</button>
+                <button type="button" id="markAllPresent" class="secondary-btn">Mark all present</button>
+                <button type="button" id="markAllAbsent" class="secondary-btn warning">Mark all absent</button>
+                <button type="submit" class="primary-btn">Save attendance</button>
               </div>
             </form>
 
@@ -107,6 +153,34 @@
               </div>
             </div>
             <div id="recordsList" class="records-list"></div>
+          </section>
+
+          <section class="card history-panel">
+            <div class="section-head">
+              <h2>Attendance History</h2>
+            </div>
+
+            <div class="history-filters">
+              <label>
+                Teacher
+                <select id="historyTeacher"></select>
+              </label>
+              <label>
+                Subject
+                <input id="historySubject" type="text" placeholder="Math / Physics" />
+              </label>
+              <label>
+                From
+                <input id="historyFrom" type="date" />
+              </label>
+              <label>
+                To
+                <input id="historyTo" type="date" />
+              </label>
+              <button id="historySearchBtn" type="button" class="primary-btn">Search History</button>
+            </div>
+
+            <div id="historyList" class="history-list"></div>
           </section>
         </section>
 

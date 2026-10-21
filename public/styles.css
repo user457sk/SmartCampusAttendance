@@ -1,458 +1,542 @@
-const state = {
-  user: null,
-  students: [],
-  records: [],
-  summary: null,
-  selectedDate: getTodayDate(),
-  selectedTime: '09:00',
-};
-
-const refs = {
-  authContainer: document.getElementById('authContainer'),
-  appContainer: document.getElementById('appContainer'),
-  loginForm: document.getElementById('loginForm'),
-  signupForm: document.getElementById('signupForm'),
-  logoutBtn: document.getElementById('logoutBtn'),
-  currentUserChip: document.getElementById('currentUserChip'),
-  calendarTitle: document.getElementById('calendarTitle'),
-  calendarGrid: document.getElementById('calendarGrid'),
-  selectedDate: document.getElementById('selectedDate'),
-  selectedTime: document.getElementById('selectedTime'),
-  subjectFilter: document.getElementById('subjectFilter'),
-  studentTableBody: document.getElementById('studentTableBody'),
-  attendanceForm: document.getElementById('attendanceForm'),
-  studentForm: document.getElementById('studentForm'),
-  recordsList: document.getElementById('recordsList'),
-  summaryStats: document.getElementById('summaryStats'),
-  selectedContext: document.getElementById('selectedContext'),
-  attendanceDate: document.getElementById('attendanceDate'),
-  attendanceTime: document.getElementById('attendanceTime'),
-  subjectName: document.getElementById('subjectName'),
-  teacherName: document.getElementById('teacherName'),
-  markAllPresent: document.getElementById('markAllPresent'),
-  markAllAbsent: document.getElementById('markAllAbsent'),
-  exportCsv: document.getElementById('exportCsv'),
-  printPdf: document.getElementById('printPdf'),
-};
-
-let currentMonth = new Date().getMonth();
-let currentYear = new Date().getFullYear();
-let draftEntries = [];
-
-attachEvents();
-checkAuth();
-
-function attachEvents() {
-  refs.loginForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Login failed.');
-
-      state.user = result.user;
-      refs.loginForm.reset();
-      await loadDashboardData();
-      showApp();
-    } catch (error) {
-      alert(error.message);
-    }
-  });
-
-  refs.signupForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const name = document.getElementById('signupName').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    const role = document.getElementById('signupRole').value;
-
-    try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Signup failed.');
-
-      state.user = result.user;
-      refs.signupForm.reset();
-      await loadDashboardData();
-      showApp();
-    } catch (error) {
-      alert(error.message);
-    }
-  });
-
-  refs.logoutBtn.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    state.user = null;
-    refs.authContainer.classList.remove('hidden');
-    refs.appContainer.classList.add('hidden');
-  });
-
-  refs.selectedDate.addEventListener('input', () => {
-    state.selectedDate = refs.selectedDate.value || getTodayDate();
-    refs.attendanceDate.value = state.selectedDate;
-    refreshDraftFromSelectedSession();
-    renderCalendar();
-    renderRecords();
-  });
-
-  refs.attendanceDate.addEventListener('input', () => {
-    state.selectedDate = refs.attendanceDate.value || getTodayDate();
-    refs.selectedDate.value = state.selectedDate;
-    refreshDraftFromSelectedSession();
-    renderCalendar();
-    renderRecords();
-  });
-
-  refs.selectedTime.addEventListener('input', () => {
-    state.selectedTime = refs.selectedTime.value || '09:00';
-    refs.attendanceTime.value = state.selectedTime;
-    refreshDraftFromSelectedSession();
-    renderRecords();
-  });
-
-  refs.attendanceTime.addEventListener('input', () => {
-    state.selectedTime = refs.attendanceTime.value || '09:00';
-    refs.selectedTime.value = state.selectedTime;
-    refreshDraftFromSelectedSession();
-    renderRecords();
-  });
-
-  refs.subjectFilter.addEventListener('input', renderRecords);
-
-  refs.attendanceForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const date = refs.attendanceDate.value;
-    const time = refs.attendanceTime.value;
-    const subject = refs.subjectName.value.trim();
-    const teacher = refs.teacherName.value.trim();
-
-    if (!date || !time || !subject || !teacher) {
-      alert('Please fill all required fields.');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date,
-          time,
-          subject,
-          teacher,
-          entries: draftEntries,
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Could not save attendance.');
-
-      await loadDashboardData();
-      refreshDraftFromSelectedSession();
-      renderStudentTable();
-      renderRecords();
-      renderSummary();
-      alert('Attendance saved successfully.');
-    } catch (error) {
-      alert(error.message);
-    }
-  });
-
-  refs.markAllPresent.addEventListener('click', () => applyStatusToAll('present'));
-  refs.markAllAbsent.addEventListener('click', () => applyStatusToAll('absent'));
-  refs.exportCsv.addEventListener('click', () => window.open('/api/export/csv', '_blank'));
-  refs.printPdf.addEventListener('click', () => window.print());
-
-  refs.studentForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const name = document.getElementById('studentNameInput').value.trim();
-    const rollNo = document.getElementById('studentRollInput').value.trim();
-    const className = document.getElementById('studentClassInput').value.trim();
-
-    if (!name || !rollNo || !className) {
-      alert('Please fill all student details.');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/students', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, rollNo, className }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Could not add student.');
-
-      refs.studentForm.reset();
-      await loadDashboardData();
-      refreshDraftFromSelectedSession();
-      renderStudentTable();
-      renderSummary();
-    } catch (error) {
-      alert(error.message);
-    }
-  });
-
-  document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
-  document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
+* {
+  box-sizing: border-box;
 }
 
-async function checkAuth() {
-  try {
-    const response = await fetch('/api/auth/me');
-    if (!response.ok) {
-      showAuth();
-      return;
-    }
+:root {
+  --bg: #f4f7ff;
+  --surface: #ffffff;
+  --surface-alt: #eef4ff;
+  --primary: #2650d8;
+  --primary-dark: #1838a6;
+  --accent: #14b78c;
+  --warning: #f08b2d;
+  --danger: #df3d3d;
+  --text: #1f2937;
+  --muted: #65748b;
+  --border: #dfe7f5;
+  --shadow: 0 14px 30px rgba(22, 35, 68, 0.08);
+}
 
-    const result = await response.json();
-    state.user = result.user;
-    await loadDashboardData();
-    showApp();
-  } catch (error) {
-    showAuth();
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(180deg, #edf3ff 0%, #f4f7ff 100%);
+  color: var(--text);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button,
+input,
+select {
+  border-radius: 10px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(460px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.auth-header {
+  margin-bottom: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form label,
+.quick-panel label,
+.attendance-form label,
+.stacked-form label,
+.history-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+}
+
+.primary-btn,
+.secondary-btn,
+.tiny-btn,
+.status-btn {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.primary-btn,
+.secondary-btn {
+  border: none;
+  padding: 11px 16px;
+  font-weight: 700;
+}
+
+.primary-btn {
+  background: var(--primary);
+  color: white;
+}
+
+.primary-btn:hover {
+  background: var(--primary-dark);
+}
+
+.secondary-btn {
+  background: #edf4ff;
+  color: var(--primary-dark);
+}
+
+.secondary-btn.warning {
+  background: #fff3ea;
+  color: var(--warning);
+}
+
+.full {
+  width: 100%;
+}
+
+.divider {
+  text-align: center;
+  position: relative;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--border);
+}
+
+.divider span {
+  position: relative;
+  background: white;
+  padding: 0 12px;
+}
+
+.app-shell {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 24px 18px 38px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  gap: 22px;
+}
+
+.sidebar,
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendar-title {
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.tiny-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--surface-alt);
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  text-align: center;
+}
+
+.calendar-weekday,
+.day {
+  padding: 10px 0;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.calendar-weekday {
+  background: #f8faff;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.day {
+  border: 1px solid transparent;
+  background: #f7f9fd;
+  color: var(--text);
+}
+
+.day:hover {
+  border-color: var(--primary);
+}
+
+.day.selected {
+  background: var(--primary);
+  color: #fff;
+}
+
+.day.outside {
+  opacity: 0.35;
+}
+
+.day.today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.quick-panel,
+.stacked-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-alt);
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--primary-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.fields-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.attendance-actions,
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.student-table-wrap {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-btn {
+  border: 1px solid var(--border);
+  background: white;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.status-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.status-btn.late.active {
+  background: var(--warning);
+  border-color: var(--warning);
+}
+
+.status-btn.absent.active {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.records-list,
+.history-list {
+  display: grid;
+  gap: 14px;
+}
+
+.record-item,
+.history-item {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  background: linear-gradient(180deg, #fbfcff 0%, #f5f8ff 100%);
+}
+
+.record-head,
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.record-title {
+  font-weight: 700;
+}
+
+.record-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.history-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.history-item {
+  display: grid;
+  gap: 12px;
+}
+
+.history-entries {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.history-student-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pill.present {
+  background: var(--accent);
+}
+
+.status-pill.late {
+  background: var(--warning);
+}
+
+.status-pill.absent {
+  background: var(--danger);
+}
+
+.summary-stats {
+  display: grid;
+  gap: 14px;
+}
+
+.stat-box {
+  background: var(--surface-alt);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.stat-box .label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stat-box .value {
+  margin-top: 6px;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.empty-state {
+  color: var(--muted);
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 30px 12px;
+}
+
+.empty-state.small {
+  padding: 12px 10px;
+}
+
+@media (max-width: 1200px) {
+  .layout {
+    grid-template-columns: 1fr;
   }
 }
 
-async function loadDashboardData() {
-  const [studentsResponse, recordsResponse, summaryResponse] = await Promise.all([
-    fetch('/api/students'),
-    fetch('/api/records'),
-    fetch('/api/summary'),
-  ]);
+@media (max-width: 700px) {
+  .fields-row,
+  .history-filters {
+    grid-template-columns: 1fr;
+  }
 
-  state.students = await studentsResponse.json();
-  state.records = await recordsResponse.json();
-  state.summary = await summaryResponse.json();
-
-  refs.currentUserChip.textContent = state.user ? `${state.user.name} (${state.user.role})` : 'Guest';
-  renderStudentTable();
-  renderSummary();
-  renderRecords();
-  renderCalendar();
-}
-
-function showApp() {
-  refs.authContainer.classList.add('hidden');
-  refs.appContainer.classList.remove('hidden');
-  refs.selectedDate.value = state.selectedDate;
-  refs.attendanceDate.value = state.selectedDate;
-  refs.attendanceTime.value = state.selectedTime;
-  refs.selectedTime.value = state.selectedTime;
-  refs.teacherName.value = state.user?.name || '';
-  refreshDraftFromSelectedSession();
-}
-
-function showAuth() {
-  refs.authContainer.classList.remove('hidden');
-  refs.appContainer.classList.add('hidden');
-}
-
-function refreshDraftFromSelectedSession() {
-  const date = refs.attendanceDate.value || state.selectedDate;
-  const time = refs.attendanceTime.value || state.selectedTime;
-  const subject = refs.subjectName.value.trim() || 'Mathematics';
-  const teacher = refs.teacherName.value.trim() || state.user?.name || 'Teacher';
-
-  refs.selectedContext.textContent = `${date} • ${time}`;
-
-  const matchingRecord = state.records.find(
-    (record) => record.date === date && record.time === time && record.subject === subject && record.teacher === teacher,
-  );
-
-  const map = new Map((matchingRecord?.entries || []).map((entry) => [entry.studentId, entry.status]));
-  draftEntries = state.students.map((student) => ({
-    studentId: student.id,
-    status: map.get(student.id) || 'absent',
-  }));
-
-  renderStudentTable();
-}
-
-function renderCalendar() {
-  const monthStart = new Date(currentYear, currentMonth, 1);
-  const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  refs.calendarTitle.textContent = monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  refs.calendarGrid.innerHTML = '';
-
-  weekdayNames.forEach((day) => {
-    const cell = document.createElement('div');
-    cell.className = 'calendar-weekday';
-    cell.textContent = day;
-    refs.calendarGrid.appendChild(cell);
-  });
-
-  const startDay = new Date(currentYear, currentMonth, 1).getDay();
-  const firstCalendarDay = new Date(currentYear, currentMonth, 1 - startDay);
-
-  for (let i = 0; i < 42; i += 1) {
-    const date = new Date(firstCalendarDay);
-    date.setDate(firstCalendarDay.getDate() + i);
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'day';
-    button.textContent = date.getDate();
-
-    const dateKey = formatIsoDate(date);
-    if (date.getMonth() !== currentMonth) button.classList.add('outside');
-    if (dateKey === getTodayDate()) button.classList.add('today');
-    if (dateKey === state.selectedDate) button.classList.add('selected');
-
-    button.addEventListener('click', () => {
-      state.selectedDate = dateKey;
-      refs.selectedDate.value = state.selectedDate;
-      refs.attendanceDate.value = state.selectedDate;
-      refreshDraftFromSelectedSession();
-      renderCalendar();
-      renderRecords();
-    });
-
-    refs.calendarGrid.appendChild(button);
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
-function renderStudentTable() {
-  if (!state.students.length) {
-    refs.studentTableBody.innerHTML = '<tr><td colspan="4">No students available.</td></tr>';
-    return;
+@media print {
+  .auth-shell,
+  .attendance-form,
+  .export-actions,
+  .sidebar.right-panel,
+  .sidebar:first-child,
+  .student-table-wrap,
+  .quick-panel,
+  .status-group,
+  .section-head .pill,
+  #studentForm,
+  #logoutBtn {
+    display: none !important;
   }
 
-  refs.studentTableBody.innerHTML = state.students.map((student) => {
-    const entry = draftEntries.find((item) => item.studentId === student.id) || { status: 'absent' };
-    const status = entry.status;
-
-    return `
-      <tr>
-        <td>${student.rollNo}</td>
-        <td>${student.name}</td>
-        <td>${student.className}</td>
-        <td>
-          <div class="status-group">
-            <button type="button" class="status-btn present ${status === 'present' ? 'active' : ''}" data-student-id="${student.id}" data-status="present">Present</button>
-            <button type="button" class="status-btn late ${status === 'late' ? 'active' : ''}" data-student-id="${student.id}" data-status="late">Late</button>
-            <button type="button" class="status-btn absent ${status === 'absent' ? 'active' : ''}" data-student-id="${student.id}" data-status="absent">Absent</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  refs.studentTableBody.querySelectorAll('.status-btn').forEach((button) => {
-    button.addEventListener('click', () => updateDraftStatus(button.dataset.studentId, button.dataset.status));
-  });
-}
-
-function updateDraftStatus(studentId, status) {
-  const entry = draftEntries.find((item) => item.studentId === studentId);
-  if (entry) {
-    entry.status = status;
-  } else {
-    draftEntries.push({ studentId, status });
-  }
-  renderStudentTable();
-}
-
-function applyStatusToAll(status) {
-  draftEntries = state.students.map((student) => ({ studentId: student.id, status }));
-  renderStudentTable();
-}
-
-function renderRecords() {
-  const filterText = refs.subjectFilter.value.trim().toLowerCase();
-  const selectedDate = refs.selectedDate.value || state.selectedDate;
-  const selectedTime = refs.selectedTime.value || state.selectedTime;
-
-  const filtered = state.records.filter((record) => {
-    const matchesDate = record.date === selectedDate;
-    const matchesTime = record.time === selectedTime;
-    const matchesSubject = !filterText || record.subject.toLowerCase().includes(filterText);
-    return matchesDate && matchesTime && matchesSubject;
-  });
-
-  if (!filtered.length) {
-    refs.recordsList.innerHTML = '<div class="empty-state">No attendance record found for this date and time.</div>';
-    return;
+  .app-shell {
+    max-width: 100%;
+    padding: 0;
   }
 
-  refs.recordsList.innerHTML = filtered.map((record) => {
-    const counts = getCounts(record.entries);
-    return `
-      <div class="record-item">
-        <div class="record-head">
-          <div>
-            <div class="record-title">${record.subject}</div>
-            <div class="record-meta">${record.teacher} • ${record.date} • ${record.time}</div>
-          </div>
-          <div class="record-meta">P: ${counts.present} | A: ${counts.absent} | L: ${counts.late}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderSummary() {
-  const summary = state.summary || { totalStudents: 0, present: 0, absent: 0, late: 0 };
-
-  refs.summaryStats.innerHTML = `
-    <div class="stat-box">
-      <div class="label">Total Students</div>
-      <div class="value">${summary.totalStudents}</div>
-    </div>
-    <div class="stat-box">
-      <div class="label">Present</div>
-      <div class="value">${summary.present}</div>
-    </div>
-    <div class="stat-box">
-      <div class="label">Absent</div>
-      <div class="value">${summary.absent}</div>
-    </div>
-    <div class="stat-box">
-      <div class="label">Late</div>
-      <div class="value">${summary.late}</div>
-    </div>
-  `;
-}
-
-function changeMonth(delta) {
-  const nextDate = new Date(currentYear, currentMonth + delta, 1);
-  currentMonth = nextDate.getMonth();
-  currentYear = nextDate.getFullYear();
-  renderCalendar();
-}
-
-function getCounts(entries = []) {
-  const summary = { present: 0, absent: 0, late: 0 };
-  entries.forEach((entry) => {
-    if (summary[entry.status] !== undefined) summary[entry.status] += 1;
-  });
-  return summary;
-}
-
-function formatIsoDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function getTodayDate() {
-  return formatIsoDate(new Date());
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }

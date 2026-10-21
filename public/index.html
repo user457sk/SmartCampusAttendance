@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartCampus Attendance</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Smart Campus</p>
+          <h1>Attendance Dashboard</h1>
+        </div>
+        <div class="role-switch" aria-label="role selector">
+          <button type="button" class="role-btn active" data-role="teacher">Teacher</button>
+          <button type="button" class="role-btn" data-role="admin">Admin</button>
+          <button type="button" class="role-btn" data-role="student">Student</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="sidebar">
+          <section class="card">
+            <h2>Calendar</h2>
+            <div class="calendar-header">
+              <button id="prevMonth" class="tiny-btn" aria-label="Previous month">◀</button>
+              <div id="calendarTitle" class="calendar-title"></div>
+              <button id="nextMonth" class="tiny-btn" aria-label="Next month">▶</button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+          </section>
+
+          <section class="card quick-panel">
+            <h2>Session Controls</h2>
+            <label>
+              Selected Date
+              <input id="selectedDate" type="date" />
+            </label>
+            <label>
+              Time
+              <input id="selectedTime" type="time" value="09:00" />
+            </label>
+            <label>
+              Subject
+              <input id="subjectFilter" type="text" placeholder="e.g. Mathematics" />
+            </label>
+          </section>
+        </aside>
+
+        <section class="main-content">
+          <section class="card">
+            <div class="section-head">
+              <h2>Take Attendance</h2>
+              <span id="selectedContext" class="pill">No session selected</span>
+            </div>
+
+            <form id="attendanceForm" class="attendance-form">
+              <div class="fields-row">
+                <label>
+                  Subject
+                  <input id="subjectName" type="text" placeholder="Mathematics" required />
+                </label>
+                <label>
+                  Teacher
+                  <input id="teacherName" type="text" placeholder="Teacher Name" required />
+                </label>
+                <label>
+                  Date
+                  <input id="attendanceDate" type="date" required />
+                </label>
+                <label>
+                  Time
+                  <input id="attendanceTime" type="time" required />
+                </label>
+              </div>
+
+              <div class="attendance-actions">
+                <button type="button" id="markAllPresent" class="secondary-btn">Mark All Present</button>
+                <button type="button" id="markAllAbsent" class="secondary-btn warning">Mark All Absent</button>
+                <button type="submit" class="primary-btn">Save Attendance</button>
+              </div>
+            </form>
+
+            <div class="student-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Roll</th>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="studentTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Attendance Records</h2>
+              <div class="export-actions">
+                <button type="button" id="exportCsv" class="secondary-btn">Export CSV</button>
+                <button type="button" id="printPdf" class="secondary-btn">Print / PDF</button>
+              </div>
+            </div>
+            <div id="recordsList" class="records-list"></div>
+          </section>
+        </section>
+
+        <aside class="sidebar right-panel">
+          <section class="card summary-card">
+            <h2>Summary</h2>
+            <div id="summaryStats" class="summary-stats"></div>
+          </section>
+
+          <section class="card">
+            <h2>Add Student</h2>
+            <form id="studentForm" class="stacked-form">
+              <label>
+                Student Name
+                <input id="studentNameInput" type="text" placeholder="Student name" required />
+              </label>
+              <label>
+                Roll Number
+                <input id="studentRollInput" type="text" placeholder="Roll No" required />
+              </label>
+              <label>
+                Class / Section
+                <input id="studentClassInput" type="text" placeholder="BCA-1" required />
+              </label>
+              <button type="submit" class="primary-btn">Add Student</button>
+            </form>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

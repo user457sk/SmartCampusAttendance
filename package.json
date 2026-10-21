@@ -1,0 +1,21 @@
+{
+  "name": "smartcampusattendance",
+  "version": "1.0.0",
+  "description": "Smart Campus Attendance Management System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "attendance",
+    "school",
+    "teacher",
+    "student",
+    "campus"
+  ],
+  "author": "SmartCampusAttendance",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

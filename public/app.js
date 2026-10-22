@@ -124,7 +124,7 @@
         return '<tr><td>' + escapeHtml(student ? student.rollNo : '') + '</td>' +
           '<td>' + escapeHtml(student ? student.name : 'Unknown student') + '</td>' +
           '<td>' + escapeHtml(student ? student.className : '') + '</td>' +
-          '<td><span class="status-pill status-' + escapeHtml(String(entry.status || 'absent').toLowerCase()) + '">' +
+          '<td><span class="status-pill ' + escapeHtml(String(entry.status || 'absent').toLowerCase()) + '">' +
           escapeHtml(String(entry.status || 'absent').toUpperCase()) + '</span></td></tr>';
       }).join('');
       return '<article class="history-record card">' +

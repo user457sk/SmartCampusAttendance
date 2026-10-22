@@ -49,6 +49,7 @@
 
   function renderStudents() {
     const body = $('studentTableBody');
+    if (!body) return;
     if (!state.students.length) {
       body.innerHTML = '<tr><td colspan="4">No students found. Add students to start taking attendance.</td></tr>';
       return;
@@ -64,9 +65,11 @@
   }
 
   function populateTeacherSelects() {
+    const teacherSelects = ['historyTeacher', 'adminTeacher'];
     const names = Array.from(new Set(state.records.map((record) => String(record.teacher || '').trim()).filter(Boolean)))
       .sort((a, b) => a.localeCompare(b));
-    ['historyTeacher', 'adminTeacher'].forEach((id) => {
+
+    teacherSelects.forEach((id) => {
       const select = $(id);
       if (!select) return;
       const previous = select.value;
@@ -82,22 +85,24 @@
   }
 
   function renderSummary() {
+    const summaryTarget = $('summaryStats');
+    if (!summaryTarget) return;
     api('/api/summary').then((summary) => {
-      $('summaryStats').innerHTML =
+      summaryTarget.innerHTML =
         '<div class="stat-box"><div class="label">Total Students</div><div class="value">' + escapeHtml(summary.totalStudents || 0) + '</div></div>' +
         '<div class="stat-box"><div class="label">Present</div><div class="value">' + escapeHtml(summary.present || 0) + '</div></div>' +
         '<div class="stat-box"><div class="label">Absent</div><div class="value">' + escapeHtml(summary.absent || 0) + '</div></div>' +
         '<div class="stat-box"><div class="label">Late</div><div class="value">' + escapeHtml(summary.late || 0) + '</div></div>';
     }).catch((error) => {
-      $('summaryStats').textContent = 'Unable to load summary: ' + error.message;
+      summaryTarget.textContent = 'Unable to load summary: ' + error.message;
     });
   }
 
   function selectedRecordFilters() {
     return {
-      date: $('selectedDate').value,
-      time: $('selectedTime').value,
-      subject: $('subjectFilter').value.trim()
+      date: $('selectedDate') ? $('selectedDate').value : '',
+      time: $('selectedTime') ? $('selectedTime').value : '',
+      subject: $('subjectFilter') ? $('subjectFilter').value.trim() : ''
     };
   }
 
@@ -113,6 +118,7 @@
 
   function renderRecordCards(targetId, records, emptyMessage) {
     const target = $(targetId);
+    if (!target) return;
     if (!records.length) {
       target.innerHTML = '<p>' + escapeHtml(emptyMessage || 'No attendance records match these filters.') + '</p>';
       return;
@@ -150,23 +156,25 @@
   }
 
   function renderHistory() {
-    const teacher = $('historyTeacher').value;
+    const teacherSelect = $('historyTeacher');
+    if (!teacherSelect) return;
     const records = filterRecords(state.records, {
-      teacher,
-      subject: $('historySubject').value.trim(),
-      from: $('historyFrom').value,
-      to: $('historyTo').value
+      teacher: teacherSelect.value,
+      subject: $('historySubject') ? $('historySubject').value.trim() : '',
+      from: $('historyFrom') ? $('historyFrom').value : '',
+      to: $('historyTo') ? $('historyTo').value : ''
     });
     renderRecordCards('historyList', records, 'No history found. Try a different teacher, subject, or date range.');
   }
 
   function renderAdminAttendance() {
-    const teacher = $('adminTeacher').value;
+    const teacherSelect = $('adminTeacher');
+    if (!teacherSelect) return;
     const records = filterRecords(state.records, {
-      teacher,
-      subject: $('adminSubject').value.trim(),
-      from: $('adminFrom').value,
-      to: $('adminTo').value
+      teacher: teacherSelect.value,
+      subject: $('adminSubject') ? $('adminSubject').value.trim() : '',
+      from: $('adminFrom') ? $('adminFrom').value : '',
+      to: $('adminTo') ? $('adminTo').value : ''
     });
     renderRecordCards('adminAttendanceList', records, 'No attendance records match the admin filters.');
   }
@@ -174,6 +182,7 @@
   function renderCalendar() {
     const title = $('calendarTitle');
     const grid = $('calendarGrid');
+    if (!title || !grid) return;
     const year = state.month.getFullYear();
     const month = state.month.getMonth();
     title.textContent = state.month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -187,7 +196,7 @@
     for (let i = 0; i < firstDay; i += 1) cells.push('<div class="day outside"></div>');
     for (let day = 1; day <= daysInMonth; day += 1) {
       const date = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-      const selected = $('selectedDate').value === date ? ' selected' : '';
+      const selected = $('selectedDate') && $('selectedDate').value === date ? ' selected' : '';
       const hasRecords = recordDates.has(date) ? ' today' : '';
       cells.push('<button type="button" class="day' + selected + hasRecords + '" data-date="' + date + '">' + day + '</button>');
     }
@@ -208,7 +217,8 @@
       renderCalendar();
     } catch (error) {
       showMessage('attendanceMessage', 'Could not load attendance data: ' + error.message, true);
-      $('recordsList').textContent = 'Could not load records: ' + error.message;
+      const recordsList = $('recordsList');
+      if (recordsList) recordsList.textContent = 'Could not load records: ' + error.message;
     }
   }
 
@@ -218,115 +228,169 @@
       button.classList.toggle('active', button.dataset.role === state.role);
       button.setAttribute('aria-pressed', button.dataset.role === state.role ? 'true' : 'false');
     });
-    $('adminAttendancePanel').classList.toggle('hidden', state.role !== 'admin');
-    $('teacherHistoryPanel').classList.toggle('hidden', state.role === 'admin');
-    $('takeAttendancePanel').classList.toggle('hidden', state.role === 'admin');
-    $('addStudentPanel').classList.toggle('hidden', state.role === 'admin');
+
+    const panelVisibility = [
+      ['adminAttendancePanel', state.role === 'admin'],
+      ['teacherHistoryPanel', state.role !== 'admin'],
+      ['takeAttendancePanel', state.role !== 'admin'],
+      ['addStudentPanel', state.role !== 'admin']
+    ];
+
+    panelVisibility.forEach(([id, visible]) => {
+      const panel = $(id);
+      if (panel) panel.classList.toggle('hidden', !visible);
+    });
+
     renderRecordList();
     renderHistory();
     renderAdminAttendance();
   }
 
-  $('selectedDate').value = today;
-  $('attendanceDate').value = today;
-  $('attendanceTime').value = $('selectedTime').value || '09:00';
+  function bindRoleButtons() {
+    document.querySelectorAll('[data-role]').forEach((button) => {
+      button.addEventListener('click', () => setRole(button.dataset.role));
+    });
+  }
 
-  $('selectedDate').addEventListener('change', () => {
-    $('attendanceDate').value = $('selectedDate').value;
-    renderCalendar();
-    renderRecordList();
-  });
-  $('selectedTime').addEventListener('change', () => {
+  if ($('selectedDate')) $('selectedDate').value = today;
+  if ($('attendanceDate')) $('attendanceDate').value = today;
+  if ($('selectedTime') && $('attendanceTime')) {
+    $('selectedTime').value = $('selectedTime').value || '09:00';
     $('attendanceTime').value = $('selectedTime').value;
-    renderRecordList();
-  });
-  $('subjectFilter').addEventListener('input', renderRecordList);
-  $('applyRecordFilters').addEventListener('click', renderRecordList);
-  $('attendanceDate').addEventListener('change', () => { $('selectedDate').value = $('attendanceDate').value; renderCalendar(); });
-  $('attendanceTime').addEventListener('change', () => { $('selectedTime').value = $('attendanceTime').value; });
-  $('prevMonth').addEventListener('click', () => { state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1); renderCalendar(); });
-  $('nextMonth').addEventListener('click', () => { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1); renderCalendar(); });
-  $('calendarGrid').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-date]');
-    if (!button) return;
-    $('selectedDate').value = button.dataset.date;
-    $('attendanceDate').value = button.dataset.date;
-    state.month = new Date(button.dataset.date + 'T12:00:00');
-    renderCalendar();
-    renderRecordList();
-  });
+  }
 
-  $('markAllPresent').addEventListener('click', () => {
-    document.querySelectorAll('.student-status').forEach((select) => { select.value = 'present'; });
-  });
-  $('markAllAbsent').addEventListener('click', () => {
-    document.querySelectorAll('.student-status').forEach((select) => { select.value = 'absent'; });
-  });
+  if ($('selectedDate')) {
+    $('selectedDate').addEventListener('change', () => {
+      if ($('attendanceDate')) $('attendanceDate').value = $('selectedDate').value;
+      renderCalendar();
+      renderRecordList();
+    });
+  }
 
-  $('attendanceForm').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const teacher = $('teacherName').value.trim();
-    const subject = $('subjectName').value.trim();
-    if (!teacher || !subject || !state.students.length) {
-      showMessage('attendanceMessage', state.students.length ? 'Enter teacher and subject.' : 'Add students before saving attendance.', true);
-      return;
-    }
-    const entries = Array.from(document.querySelectorAll('.student-status')).map((select) => ({
-      studentId: select.dataset.studentId,
-      status: select.value
-    }));
-    try {
-      await api('/api/records', {
-        method: 'POST',
-        body: JSON.stringify({
-          date: $('attendanceDate').value,
-          time: $('attendanceTime').value,
-          subject,
-          teacher,
-          entries
-        })
-      });
-      showMessage('attendanceMessage', 'Attendance saved successfully.', false);
-      await refreshData();
-    } catch (error) {
-      showMessage('attendanceMessage', 'Could not save attendance: ' + error.message, true);
-    }
-  });
+  if ($('selectedTime')) {
+    $('selectedTime').addEventListener('change', () => {
+      if ($('attendanceTime')) $('attendanceTime').value = $('selectedTime').value;
+      renderRecordList();
+    });
+  }
 
-  $('studentForm').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    try {
-      await api('/api/students', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: $('studentNameInput').value.trim(),
-          rollNo: $('studentRollInput').value.trim(),
-          className: $('studentClassInput').value.trim()
-        })
-      });
-      $('studentForm').reset();
-      showMessage('studentMessage', 'Student added successfully.', false);
-      await refreshData();
-    } catch (error) {
-      showMessage('studentMessage', 'Could not add student: ' + error.message, true);
-    }
-  });
+  if ($('subjectFilter')) $('subjectFilter').addEventListener('input', renderRecordList);
+  if ($('applyRecordFilters')) $('applyRecordFilters').addEventListener('click', renderRecordList);
+  if ($('attendanceDate')) {
+    $('attendanceDate').addEventListener('change', () => {
+      if ($('selectedDate')) $('selectedDate').value = $('attendanceDate').value;
+      renderCalendar();
+    });
+  }
+  if ($('attendanceTime')) {
+    $('attendanceTime').addEventListener('change', () => {
+      if ($('selectedTime')) $('selectedTime').value = $('attendanceTime').value;
+    });
+  }
+  if ($('prevMonth')) {
+    $('prevMonth').addEventListener('click', () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1);
+      renderCalendar();
+    });
+  }
+  if ($('nextMonth')) {
+    $('nextMonth').addEventListener('click', () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1);
+      renderCalendar();
+    });
+  }
+  if ($('calendarGrid')) {
+    $('calendarGrid').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-date]');
+      if (!button) return;
+      if ($('selectedDate')) $('selectedDate').value = button.dataset.date;
+      if ($('attendanceDate')) $('attendanceDate').value = button.dataset.date;
+      state.month = new Date(button.dataset.date + 'T12:00:00');
+      renderCalendar();
+      renderRecordList();
+    });
+  }
 
-  $('historySearchBtn').addEventListener('click', renderHistory);
-  $('adminSearchBtn').addEventListener('click', renderAdminAttendance);
+  if ($('markAllPresent')) {
+    $('markAllPresent').addEventListener('click', () => {
+      document.querySelectorAll('.student-status').forEach((select) => { select.value = 'present'; });
+    });
+  }
+  if ($('markAllAbsent')) {
+    $('markAllAbsent').addEventListener('click', () => {
+      document.querySelectorAll('.student-status').forEach((select) => { select.value = 'absent'; });
+    });
+  }
+
+  if ($('attendanceForm')) {
+    $('attendanceForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const teacher = $('teacherName') ? $('teacherName').value.trim() : '';
+      const subject = $('subjectName') ? $('subjectName').value.trim() : '';
+      if (!teacher || !subject || !state.students.length) {
+        showMessage('attendanceMessage', state.students.length ? 'Enter teacher and subject.' : 'Add students before saving attendance.', true);
+        return;
+      }
+      const entries = Array.from(document.querySelectorAll('.student-status')).map((select) => ({
+        studentId: select.dataset.studentId,
+        status: select.value
+      }));
+      try {
+        await api('/api/records', {
+          method: 'POST',
+          body: JSON.stringify({
+            date: $('attendanceDate') ? $('attendanceDate').value : '',
+            time: $('attendanceTime') ? $('attendanceTime').value : '',
+            subject,
+            teacher,
+            entries
+          })
+        });
+        showMessage('attendanceMessage', 'Attendance saved successfully.', false);
+        await refreshData();
+      } catch (error) {
+        showMessage('attendanceMessage', 'Could not save attendance: ' + error.message, true);
+      }
+    });
+  }
+
+  if ($('studentForm')) {
+    $('studentForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await api('/api/students', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: $('studentNameInput') ? $('studentNameInput').value.trim() : '',
+            rollNo: $('studentRollInput') ? $('studentRollInput').value.trim() : '',
+            className: $('studentClassInput') ? $('studentClassInput').value.trim() : ''
+          })
+        });
+        $('studentForm').reset();
+        showMessage('studentMessage', 'Student added successfully.', false);
+        await refreshData();
+      } catch (error) {
+        showMessage('studentMessage', 'Could not add student: ' + error.message, true);
+      }
+    });
+  }
+
+  if ($('historySearchBtn')) $('historySearchBtn').addEventListener('click', renderHistory);
+  if ($('adminSearchBtn')) $('adminSearchBtn').addEventListener('click', renderAdminAttendance);
   ['historyTeacher', 'historySubject', 'historyFrom', 'historyTo'].forEach((id) => {
-    $(id).addEventListener('change', renderHistory);
+    const element = $(id);
+    if (element) element.addEventListener('change', renderHistory);
   });
   ['adminTeacher', 'adminSubject', 'adminFrom', 'adminTo'].forEach((id) => {
-    $(id).addEventListener('change', renderAdminAttendance);
+    const element = $(id);
+    if (element) element.addEventListener('change', renderAdminAttendance);
   });
-  document.querySelectorAll('[data-role]').forEach((button) => {
-    button.addEventListener('click', () => setRole(button.dataset.role));
-  });
-  $('exportCsv').addEventListener('click', () => { window.location.href = '/api/export/csv'; });
-  $('printPdf').addEventListener('click', () => { window.print(); });
 
-  $('selectedContext').textContent = 'Choose date, time, subject, and teacher';
+  bindRoleButtons();
+
+  if ($('selectedContext')) $('selectedContext').textContent = 'Choose date, time, subject, and teacher';
   setRole('teacher');
   refreshData();
 })();
+
+

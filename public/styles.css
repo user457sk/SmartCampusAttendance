@@ -540,3 +540,37 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Attendance history and administrator review */
+.muted { color: var(--muted); line-height: 1.5; }
+.history-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+.history-filters button { min-height: 42px; }
+.history-record { margin: 14px 0; box-shadow: none; }
+.history-record h3 { margin: 0 0 6px; }
+.history-record p { margin-bottom: 8px; color: var(--muted); }
+.record-counts { font-weight: 700; font-size: .9rem; }
+.history-record details { margin-top: 12px; }
+.history-record summary { cursor: pointer; color: var(--primary-dark); font-weight: 700; padding: 8px 0; }
+.history-record .student-table-wrap { margin-top: 8px; }
+.history-record table { width: 100%; border-collapse: collapse; }
+.history-record th, .history-record td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+.history-record th { color: var(--muted); font-size: .8rem; }
+.calendar-day-label { color: var(--muted); font-size: .8rem; padding: 8px 0; }
+.calendar-day, .day { cursor: pointer; }
+.day.has-records { box-shadow: inset 0 0 0 2px var(--accent); }
+.day.selected { background: var(--primary); color: #fff; }
+#attendanceMessage, #studentMessage { min-height: 1em; margin: 10px 0 0; }
+@media (max-width: 900px) {
+  .history-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .history-filters { grid-template-columns: 1fr; }
+  .history-record .section-head { align-items: flex-start; flex-direction: column; }
+}

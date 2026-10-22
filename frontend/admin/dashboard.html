@@ -53,6 +53,7 @@
             <a href="#subjectsSection" onclick="switchAdminTab('subjects')"><span class="ico">📚</span> Subjects & Catalog</a>
             <a href="#teachersSection" onclick="switchAdminTab('teachers')"><span class="ico">🧑‍🏫</span> Teachers Directory</a>
             <a href="#studentsSection" onclick="switchAdminTab('students')"><span class="ico">🧑‍🎓</span> Students Directory</a>
+            <a href="#attendanceSection" onclick="switchAdminTab('attendance')"><span class="ico">📊</span> Attendance Records</a>
         </nav>
         <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
     </aside>
@@ -115,6 +116,7 @@
                 <button class="admin-tab-btn" id="btnTabSubjects" onclick="switchAdminTab('subjects')">Subjects Catalog</button>
                 <button class="admin-tab-btn" id="btnTabTeachers" onclick="switchAdminTab('teachers')">Teachers Directory</button>
                 <button class="admin-tab-btn" id="btnTabStudents" onclick="switchAdminTab('students')">Students Directory</button>
+                <button class="admin-tab-btn" id="btnTabAttendance" onclick="switchAdminTab('attendance')">Attendance Records</button>
             </div>
 
             <!-- SECTION 1: ALL ENROLLMENTS & APPROVALS -->
@@ -168,6 +170,23 @@
                 <div class="panel-body" id="adminTeachersTable">
                     <p class="muted">Loading teachers…</p>
                 </div>
+            </div>
+
+            <!-- SECTION 5: ALL ATTENDANCE -->
+            <div id="viewAttendance" class="panel" style="margin-top:0;display:none">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <div><h3>All Attendance Records</h3><p class="muted" style="font-size:0.85rem;margin-top:2px">View attendance across all teachers, subjects, dates, and students.</p></div>
+                    <button class="btn btn-outline" type="button" onclick="loadAttendanceView()">Refresh</button>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;padding:16px 20px">
+                    <div class="form-group" style="min-width:180px;flex:1"><label for="adminAttendanceTeacher">Teacher</label><select class="form-control" id="adminAttendanceTeacher"><option value="">All teachers</option></select></div>
+                    <div class="form-group" style="min-width:180px;flex:1"><label for="adminAttendanceSubject">Subject</label><select class="form-control" id="adminAttendanceSubject"><option value="">All subjects</option></select></div>
+                    <div class="form-group" style="min-width:150px"><label for="adminAttendanceFrom">From date</label><input class="form-control" id="adminAttendanceFrom" type="date" /></div>
+                    <div class="form-group" style="min-width:150px"><label for="adminAttendanceTo">To date</label><input class="form-control" id="adminAttendanceTo" type="date" /></div>
+                    <div class="form-group" style="min-width:140px"><label for="adminAttendanceStatus">Status</label><select class="form-control" id="adminAttendanceStatus"><option value="">All statuses</option><option value="Present">Present</option><option value="Absent">Absent</option></select></div>
+                    <div style="display:flex;align-items:end"><button class="btn btn-primary" type="button" onclick="filterAttendanceView()">Search</button></div>
+                </div>
+                <div class="panel-body" id="adminAttendanceTable"><p class="muted">Open Attendance Records to load saved attendance.</p></div>
             </div>
 
             <!-- SECTION 4: STUDENTS -->

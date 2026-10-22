@@ -1148,234 +1148,66 @@ async function saveAttendance() {
    ============================================================ */
 
 async function loadHistoryPage() {
-
-    const subjects =
-        await api(
-            "/api/teachers/subjects"
-        );
-
-
-    const select =
-        document.getElementById(
-            "subjectSelect"
-        );
-
-
-    select.innerHTML = `
-        <option value="">
-            Select subject…
-        </option>
-    ` +
-
-    subjects.map(subject => `
-
-        <option value="${subject.id}">
-            ${esc(subject.subject_code)}
-            –
-            ${esc(subject.subject_name)}
-        </option>
-
-    `).join("");
-
-
-    const params =
-        new URLSearchParams(location.search);
-
-
-    if (params.get("subject")) {
-
-        select.value =
-            params.get("subject");
-
+    const select = document.getElementById("subjectSelect");
+    const historyBody = document.getElementById("historyBody");
+    const reportBody = document.getElementById("reportBody");
+    try {
+        const subjects = await api("/api/teachers/subjects");
+        select.innerHTML = '<option value="">Select subject…</option>' + subjects.map(subject =>
+            `<option value="${subject.id}">${esc(subject.subject_code)} – ${esc(subject.subject_name)}</option>`
+        ).join("");
+        if (!subjects.length) {
+            historyBody.innerHTML = '<tr><td colspan="4" class="muted">No subjects are assigned to your account yet.</td></tr>';
+            reportBody.innerHTML = '<tr><td colspan="6" class="muted">Assign a subject before viewing attendance reports.</td></tr>';
+            return;
+        }
+        const requestedSubject = new URLSearchParams(location.search).get("subject");
+        select.value = subjects.some(subject => String(subject.id) === String(requestedSubject))
+            ? String(requestedSubject) : String(subjects[0].id);
+        select.addEventListener("change", loadHistoryData);
+        await loadHistoryData();
+    } catch (error) {
+        console.error("Unable to initialize attendance history:", error);
+        historyBody.innerHTML = `<tr><td colspan="4" class="muted">Could not load subjects: ${esc(error.message)}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="6" class="muted">Could not load report: ${esc(error.message)}</td></tr>`;
     }
-
-
-    select.addEventListener(
-        "change",
-        loadHistoryData
-    );
-
-
-    if (select.value) {
-
-        loadHistoryData();
-
-    }
-
 }
-
 
 async function loadHistoryData() {
-
-    const subjectId =
-        document.getElementById(
-            "subjectSelect"
-        ).value;
-
-
+    const subjectId = document.getElementById("subjectSelect").value;
+    const historyBody = document.getElementById("historyBody");
+    const reportBody = document.getElementById("reportBody");
     if (!subjectId) {
+        historyBody.innerHTML = '<tr><td colspan="4" class="muted">Select a subject to view history.</td></tr>';
+        reportBody.innerHTML = '<tr><td colspan="6" class="muted">Select a subject to view the report.</td></tr>';
         return;
     }
-
-
-    const data =
-        await api(
-            `/api/teachers/subjects/${subjectId}/history`
-        );
-
-
-    const report =
-        await api(
-            `/api/teachers/subjects/${subjectId}/report`
-        );
-
-
-    /* ---------------- History table ---------------- */
-
-    const historyBody =
-        document.getElementById(
-            "historyBody"
-        );
-
-
-    historyBody.innerHTML =
-        data.records.length
-
-        ? data.records.map(record => `
-
-            <tr>
-
-                <td>
-                    ${prettyDate(record.date)}
-                </td>
-
-                <td>
-                    ${esc(record.roll_number)}
-                </td>
-
-                <td>
-                    ${esc(record.full_name)}
-                </td>
-
-                <td>
-
-                    <span
-                        class="
-                            badge
-                            badge-${
-                                record.status === "Present"
-                                    ? "present"
-                                    : "absent"
-                            }
-                        "
-                    >
-                        ${record.status}
-                    </span>
-
-                </td>
-
-            </tr>
-
-        `).join("")
-
-        : `
-            <tr>
-                <td
-                    colspan="4"
-                    class="muted"
-                >
-                    No attendance recorded yet.
-                </td>
-            </tr>
-        `;
-
-
-    /* ---------------- Report table ---------------- */
-
-    const reportBody =
-        document.getElementById(
-            "reportBody"
-        );
-
-
-    reportBody.innerHTML =
-        report.report.length
-
-        ? report.report.map(record => `
-
-            <tr>
-
-                <td>
-                    ${esc(record.roll_number)}
-                </td>
-
-                <td>
-                    ${esc(record.full_name)}
-                </td>
-
-                <td>
-                    ${record.total}
-                </td>
-
-                <td>
-                    ${record.attended}
-                </td>
-
-                <td>
-                    ${record.absent}
-                </td>
-
-                <td>
-
-                    <div
-                        style="
-                            display:flex;
-                            align-items:center;
-                            gap:10px
-                        "
-                    >
-
-                        <div
-                            class="progress"
-                            style="width:90px"
-                        >
-
-                            <i
-                                class="${pctClass(
-                                    record.percentage
-                                )}"
-                                style="
-                                    width:${record.percentage}%
-                                "
-                            ></i>
-
-                        </div>
-
-                        <b>
-                            ${record.percentage}%
-                        </b>
-
-                    </div>
-
-                </td>
-
-            </tr>
-
-        `).join("")
-
-        : `
-            <tr>
-                <td
-                    colspan="6"
-                    class="muted"
-                >
-                    No data yet.
-                </td>
-            </tr>
-        `;
-
+    historyBody.innerHTML = '<tr><td colspan="4" class="muted">Loading attendance history…</td></tr>';
+    reportBody.innerHTML = '<tr><td colspan="6" class="muted">Loading subject report…</td></tr>';
+    try {
+        const [data, report] = await Promise.all([
+            api(`/api/teachers/subjects/${encodeURIComponent(subjectId)}/history`),
+            api(`/api/teachers/subjects/${encodeURIComponent(subjectId)}/report`)
+        ]);
+        const records = Array.isArray(data.records) ? data.records : [];
+        const reportRecords = Array.isArray(report.report) ? report.report : [];
+        historyBody.innerHTML = records.length ? records.map(record => `
+            <tr><td>${prettyDate(record.date)}</td><td>${esc(record.roll_number)}</td><td>${esc(record.full_name)}</td>
+            <td><span class="badge badge-${record.status === "Present" ? "present" : "absent"}">${esc(record.status)}</span></td></tr>
+        `).join("") : '<tr><td colspan="4" class="muted">No attendance recorded for this subject yet.</td></tr>';
+        reportBody.innerHTML = reportRecords.length ? reportRecords.map(record => `
+            <tr><td>${esc(record.roll_number)}</td><td>${esc(record.full_name)}</td><td>${Number(record.total) || 0}</td>
+            <td>${Number(record.attended) || 0}</td><td>${Number(record.absent) || 0}</td><td>
+            <div style="display:flex;align-items:center;gap:10px"><div class="progress" style="width:90px">
+            <i class="${pctClass(record.percentage)}" style="width:${Math.max(0, Math.min(100, Number(record.percentage) || 0))}%"></i></div>
+            <b>${Number(record.percentage) || 0}%</b></div></td></tr>
+        `).join("") : '<tr><td colspan="6" class="muted">No report data available for this subject yet.</td></tr>';
+    } catch (error) {
+        console.error("Unable to load attendance history/report:", error);
+        historyBody.innerHTML = `<tr><td colspan="4" class="muted">Could not load attendance history: ${esc(error.message)}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="6" class="muted">Could not load report: ${esc(error.message)}</td></tr>`;
+    }
 }
-
 
 /* ============================================================
    TEACHER NAV BADGE

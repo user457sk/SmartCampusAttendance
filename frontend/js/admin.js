@@ -344,11 +344,10 @@ async function adminDeleteEnrollment(id) {
 /* ---------------- TAB NAVIGATION ---------------- */
 async function switchAdminTab(tabName) {
     document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
-    document.getElementById("viewEnrollments").style.display = "none";
-    document.getElementById("viewSubjects").style.display = "none";
-    document.getElementById("viewTeachers").style.display = "none";
-    document.getElementById("viewStudents").style.display = "none";
-
+    ["viewEnrollments", "viewSubjects", "viewTeachers", "viewStudents", "viewAttendance"].forEach(id => {
+        const panel = document.getElementById(id);
+        if (panel) panel.style.display = "none";
+    });
     if (tabName === "overview" || tabName === "enrollments") {
         document.getElementById("btnTabOverview").classList.add("active");
         document.getElementById("viewEnrollments").style.display = "block";
@@ -365,7 +364,61 @@ async function switchAdminTab(tabName) {
         document.getElementById("btnTabStudents").classList.add("active");
         document.getElementById("viewStudents").style.display = "block";
         await loadStudentsView();
+    } else if (tabName === "attendance") {
+        document.getElementById("btnTabAttendance").classList.add("active");
+        document.getElementById("viewAttendance").style.display = "block";
+        await loadAttendanceView();
     }
+}
+
+let cachedAttendanceRecords = [];
+
+async function loadAttendanceView() {
+    const box = document.getElementById("adminAttendanceTable");
+    if (!box) return;
+    box.innerHTML = '<p class="muted">Loading attendance records…</p>';
+    try {
+        const [attendanceData, teacherData, subjectData] = await Promise.all([
+            api("/api/admin/attendance"), api("/api/admin/teachers"), api("/api/admin/subjects")
+        ]);
+        cachedAttendanceRecords = Array.isArray(attendanceData.records) ? attendanceData.records : [];
+        const teacherSelect = document.getElementById("adminAttendanceTeacher");
+        const subjectSelect = document.getElementById("adminAttendanceSubject");
+        const previousTeacher = teacherSelect.value, previousSubject = subjectSelect.value;
+        const teachers = (teacherData && teacherData.teachers) || [];
+        const subjects = (subjectData && subjectData.subjects) || [];
+        teacherSelect.innerHTML = '<option value="">All teachers</option>' + teachers.map(t => `<option value="${t.id}">${esc(t.full_name)}</option>`).join("");
+        subjectSelect.innerHTML = '<option value="">All subjects</option>' + subjects.map(s => `<option value="${s.id}">${esc(s.subject_code)} – ${esc(s.subject_name)}</option>`).join("");
+        if (teachers.some(t => String(t.id) === previousTeacher)) teacherSelect.value = previousTeacher;
+        if (subjects.some(s => String(s.id) === previousSubject)) subjectSelect.value = previousSubject;
+        filterAttendanceView();
+    } catch (error) {
+        console.error("Failed to load admin attendance:", error);
+        box.innerHTML = `<p class="muted">Could not load attendance records: ${esc(error.message)}</p>`;
+    }
+}
+
+function filterAttendanceView() {
+    const box = document.getElementById("adminAttendanceTable");
+    if (!box) return;
+    const teacherId = document.getElementById("adminAttendanceTeacher").value;
+    const subjectId = document.getElementById("adminAttendanceSubject").value;
+    const from = document.getElementById("adminAttendanceFrom").value;
+    const to = document.getElementById("adminAttendanceTo").value;
+    const status = document.getElementById("adminAttendanceStatus").value;
+    const records = cachedAttendanceRecords.filter(record =>
+        (!teacherId || String(record.teacher_id) === teacherId) &&
+        (!subjectId || String(record.subject_id) === subjectId) &&
+        (!from || String(record.date) >= from) && (!to || String(record.date) <= to) &&
+        (!status || record.status === status)
+    );
+    if (!records.length) { box.innerHTML = '<p class="muted">No attendance records match these filters.</p>'; return; }
+    box.innerHTML = `
+        <div style="overflow-x:auto"><table class="table" style="width:100%;text-align:left;border-collapse:collapse">
+        <thead><tr style="border-bottom:2px solid var(--line);color:var(--muted);font-size:0.85rem">
+        <th style="padding:10px">Date</th><th style="padding:10px">Student</th><th style="padding:10px">Roll No</th><th style="padding:10px">Subject</th><th style="padding:10px">Teacher</th><th style="padding:10px">Status</th></tr></thead><tbody>
+        ${records.map(record => `<tr style="border-bottom:1px solid var(--line);font-size:0.9rem"><td style="padding:10px">${esc(record.date)}</td><td style="padding:10px">${esc(record.student_name)}</td><td style="padding:10px"><b>${esc(record.roll_number)}</b></td><td style="padding:10px"><b>${esc(record.subject_code)}</b> – ${esc(record.subject_name)}</td><td style="padding:10px">${esc(record.teacher_name)}</td><td style="padding:10px"><span class="badge badge-${record.status === "Present" ? "present" : "absent"}">${esc(record.status)}</span></td></tr>`).join("")}
+        </tbody></table><p class="muted" style="margin-top:12px">Showing ${records.length} of ${cachedAttendanceRecords.length} attendance records.</p></div>`;
 }
 
 /* ---------------- SUBJECTS VIEW & CRUD ---------------- */

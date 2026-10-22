@@ -50,6 +50,29 @@ def reject_registration(user_id):
 
 
 # ============================================================
+# ALL ATTENDANCE RECORDS (ADMIN)
+# ============================================================
+
+@admin_bp.route("/attendance", methods=["GET"])
+@admin_required
+def all_attendance():
+    records = query(
+        """
+        SELECT a.id, a.date, a.status,
+               st.roll_number, st.full_name AS student_name,
+               s.id AS subject_id, s.subject_code, s.subject_name,
+               s.course, s.branch, s.semester,
+               t.id AS teacher_id, t.full_name AS teacher_name
+        FROM attendance a
+        JOIN students st ON st.id = a.student_id
+        JOIN subjects s ON s.id = a.subject_id
+        JOIN teachers t ON t.id = a.teacher_id
+        ORDER BY a.date DESC, s.subject_code, st.roll_number
+        """
+    )
+    return jsonify({"success": True, "records": records})
+
+# ============================================================
 # ADMIN STATS
 # ============================================================
 

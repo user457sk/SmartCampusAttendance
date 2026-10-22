@@ -84,10 +84,10 @@
   function renderSummary() {
     api('/api/summary').then((summary) => {
       $('summaryStats').innerHTML =
-        '<div class="stat"><span>Total Students</span><strong>' + escapeHtml(summary.totalStudents || 0) + '</strong></div>' +
-        '<div class="stat"><span>Present</span><strong>' + escapeHtml(summary.present || 0) + '</strong></div>' +
-        '<div class="stat"><span>Absent</span><strong>' + escapeHtml(summary.absent || 0) + '</strong></div>' +
-        '<div class="stat"><span>Late</span><strong>' + escapeHtml(summary.late || 0) + '</strong></div>';
+        '<div class="stat-box"><div class="label">Total Students</div><div class="value">' + escapeHtml(summary.totalStudents || 0) + '</div></div>' +
+        '<div class="stat-box"><div class="label">Present</div><div class="value">' + escapeHtml(summary.present || 0) + '</div></div>' +
+        '<div class="stat-box"><div class="label">Absent</div><div class="value">' + escapeHtml(summary.absent || 0) + '</div></div>' +
+        '<div class="stat-box"><div class="label">Late</div><div class="value">' + escapeHtml(summary.late || 0) + '</div></div>';
     }).catch((error) => {
       $('summaryStats').textContent = 'Unable to load summary: ' + error.message;
     });
@@ -182,14 +182,14 @@
     const recordDates = new Set(state.records.map((record) => record.date));
     const cells = [];
     ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].forEach((day) => {
-      cells.push('<div class="calendar-day-label">' + day + '</div>');
+      cells.push('<div class="calendar-weekday">' + day + '</div>');
     });
-    for (let i = 0; i < firstDay; i += 1) cells.push('<div class="calendar-day empty"></div>');
+    for (let i = 0; i < firstDay; i += 1) cells.push('<div class="day outside"></div>');
     for (let day = 1; day <= daysInMonth; day += 1) {
       const date = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
       const selected = $('selectedDate').value === date ? ' selected' : '';
-      const hasRecords = recordDates.has(date) ? ' has-records' : '';
-      cells.push('<button type="button" class="calendar-day' + selected + hasRecords + '" data-date="' + date + '">' + day + '</button>');
+      const hasRecords = recordDates.has(date) ? ' today' : '';
+      cells.push('<button type="button" class="day' + selected + hasRecords + '" data-date="' + date + '">' + day + '</button>');
     }
     grid.innerHTML = cells.join('');
   }

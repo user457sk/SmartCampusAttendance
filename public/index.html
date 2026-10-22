@@ -1,217 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SmartCampus Attendance</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <div id="authContainer" class="auth-shell">
-      <div class="auth-card">
-        <div class="auth-header">
-          <p class="eyebrow">Smart Campus</p>
-          <h1>Sign in</h1>
-        </div>
-
-        <form id="loginForm" class="auth-form">
-          <label>
-            Email
-            <input type="email" id="loginEmail" required placeholder="teacher@school.com" />
-          </label>
-          <label>
-            Password
-            <input type="password" id="loginPassword" required placeholder="********" />
-          </label>
-          <button type="submit" class="primary-btn full">Login</button>
-        </form>
-
-        <div class="divider"><span>or</span></div>
-
-        <form id="signupForm" class="auth-form">
-          <label>
-            Full Name
-            <input type="text" id="signupName" placeholder="Teacher Name" required />
-          </label>
-          <label>
-            Email
-            <input type="email" id="signupEmail" placeholder="teacher@school.com" required />
-          </label>
-          <label>
-            Password
-            <input type="password" id="signupPassword" placeholder="Minimum 6 chars" required />
-          </label>
-          <label>
-            Role
-            <select id="signupRole">
-              <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
-          <button type="submit" class="secondary-btn full">Create Account</button>
-        </form>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartCampus Attendance</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div><p class="eyebrow">Smart Campus</p><h1>Attendance Dashboard</h1></div>
+      <div class="role-switch" aria-label="Select dashboard section">
+        <button type="button" class="role-btn active" data-role="teacher">Teacher</button>
+        <button type="button" class="role-btn" data-role="admin">Admin</button>
       </div>
-    </div>
+    </header>
 
-    <div id="appContainer" class="app-shell hidden">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Smart Campus</p>
-          <h1>Attendance Dashboard</h1>
-        </div>
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="card">
+          <h2>Calendar</h2>
+          <div class="calendar-header">
+            <button id="prevMonth" class="tiny-btn" aria-label="Previous month">◀</button>
+            <div id="calendarTitle" class="calendar-title"></div>
+            <button id="nextMonth" class="tiny-btn" aria-label="Next month">▶</button>
+          </div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+        </section>
+        <section class="card quick-panel">
+          <h2>Session Controls</h2>
+          <label>Selected Date<input id="selectedDate" type="date" /></label>
+          <label>Time<input id="selectedTime" type="time" value="09:00" /></label>
+          <label>Subject Filter<input id="subjectFilter" type="text" placeholder="e.g. Mathematics" /></label>
+          <button type="button" id="applyRecordFilters" class="secondary-btn">Filter Records</button>
+        </section>
+      </aside>
 
-        <div class="top-actions">
-          <div class="user-chip" id="currentUserChip">Teacher</div>
-          <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
-        </div>
-      </header>
-
-      <main class="layout">
-        <aside class="sidebar">
-          <section class="card">
-            <h2>Calendar</h2>
-            <div class="calendar-header">
-              <button id="prevMonth" class="tiny-btn" aria-label="Previous month">◀</button>
-              <div id="calendarTitle" class="calendar-title"></div>
-              <button id="nextMonth" class="tiny-btn" aria-label="Next month">▶</button>
+      <section class="main-content">
+        <section class="card" id="takeAttendancePanel">
+          <div class="section-head"><h2>Take Attendance</h2><span id="selectedContext" class="pill">No session selected</span></div>
+          <form id="attendanceForm" class="attendance-form">
+            <div class="fields-row">
+              <label>Subject<input id="subjectName" type="text" placeholder="Mathematics" required /></label>
+              <label>Teacher<input id="teacherName" type="text" placeholder="Teacher Name" required /></label>
+              <label>Date<input id="attendanceDate" type="date" required /></label>
+              <label>Time<input id="attendanceTime" type="time" required /></label>
             </div>
-            <div id="calendarGrid" class="calendar-grid"></div>
-          </section>
-
-          <section class="card quick-panel">
-            <h2>Session Controls</h2>
-            <label>
-              Selected Date
-              <input id="selectedDate" type="date" />
-            </label>
-            <label>
-              Time
-              <input id="selectedTime" type="time" value="09:00" />
-            </label>
-            <label>
-              Subject
-              <input id="subjectFilter" type="text" placeholder="e.g. Mathematics" />
-            </label>
-          </section>
-        </aside>
-
-        <section class="main-content">
-          <section class="card">
-            <div class="section-head">
-              <h2>Take Attendance</h2>
-              <span id="selectedContext" class="pill">No session selected</span>
+            <div class="attendance-actions">
+              <button type="button" id="markAllPresent" class="secondary-btn">Mark All Present</button>
+              <button type="button" id="markAllAbsent" class="secondary-btn warning">Mark All Absent</button>
+              <button type="submit" class="primary-btn">Save Attendance</button>
             </div>
-
-            <form id="attendanceForm" class="attendance-form">
-              <div class="fields-row">
-                <label>
-                  Subject
-                  <input id="subjectName" type="text" placeholder="Mathematics" required />
-                </label>
-                <label>
-                  Teacher
-                  <input id="teacherName" type="text" placeholder="Teacher Name" required />
-                </label>
-                <label>
-                  Date
-                  <input id="attendanceDate" type="date" required />
-                </label>
-                <label>
-                  Time
-                  <input id="attendanceTime" type="time" required />
-                </label>
-              </div>
-
-              <div class="attendance-actions">
-                <button type="button" id="markAllPresent" class="secondary-btn">Mark all present</button>
-                <button type="button" id="markAllAbsent" class="secondary-btn warning">Mark all absent</button>
-                <button type="submit" class="primary-btn">Save attendance</button>
-              </div>
-            </form>
-
-            <div class="student-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Roll</th>
-                    <th>Student</th>
-                    <th>Class</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="studentTableBody"></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="card">
-            <div class="section-head">
-              <h2>Attendance Records</h2>
-              <div class="export-actions">
-                <button type="button" id="exportCsv" class="secondary-btn">Export CSV</button>
-                <button type="button" id="printPdf" class="secondary-btn">Print / PDF</button>
-              </div>
-            </div>
-            <div id="recordsList" class="records-list"></div>
-          </section>
-
-          <section class="card history-panel">
-            <div class="section-head">
-              <h2>Attendance History</h2>
-            </div>
-
-            <div class="history-filters">
-              <label>
-                Teacher
-                <select id="historyTeacher"></select>
-              </label>
-              <label>
-                Subject
-                <input id="historySubject" type="text" placeholder="Math / Physics" />
-              </label>
-              <label>
-                From
-                <input id="historyFrom" type="date" />
-              </label>
-              <label>
-                To
-                <input id="historyTo" type="date" />
-              </label>
-              <button id="historySearchBtn" type="button" class="primary-btn">Search History</button>
-            </div>
-
-            <div id="historyList" class="history-list"></div>
-          </section>
+            <p id="attendanceMessage" role="status" aria-live="polite"></p>
+          </form>
+          <div class="student-table-wrap">
+            <table><thead><tr><th>Roll</th><th>Student</th><th>Class</th><th>Status</th></tr></thead><tbody id="studentTableBody"></tbody></table>
+          </div>
         </section>
 
-        <aside class="sidebar right-panel">
-          <section class="card summary-card">
-            <h2>Summary</h2>
-            <div id="summaryStats" class="summary-stats"></div>
-          </section>
+        <section class="card">
+          <div class="section-head">
+            <h2>Attendance Records</h2>
+            <div class="export-actions">
+              <button type="button" id="exportCsv" class="secondary-btn">Export CSV</button>
+              <button type="button" id="printPdf" class="secondary-btn">Print / PDF</button>
+            </div>
+          </div>
+          <div id="recordsList" class="records-list"></div>
+        </section>
 
-          <section class="card">
-            <h2>Add Student</h2>
-            <form id="studentForm" class="stacked-form">
-              <label>
-                Student Name
-                <input id="studentNameInput" type="text" placeholder="Student name" required />
-              </label>
-              <label>
-                Roll Number
-                <input id="studentRollInput" type="text" placeholder="Roll No" required />
-              </label>
-              <label>
-                Class / Section
-                <input id="studentClassInput" type="text" placeholder="BCA-1" required />
-              </label>
-              <button type="submit" class="primary-btn">Add Student</button>
-            </form>
-          </section>
-        </aside>
-      </main>
-    </div>
+        <section class="card history-panel" id="teacherHistoryPanel">
+          <div class="section-head"><h2>Attendance History</h2><span class="pill">Teacher</span></div>
+          <p class="muted">Search saved sessions by teacher, subject, and date range. Open a record to see each student's status.</p>
+          <div class="history-filters">
+            <label>Teacher<select id="historyTeacher"><option value="">All teachers</option></select></label>
+            <label>Subject<input id="historySubject" type="text" placeholder="Math / Physics" /></label>
+            <label>From<input id="historyFrom" type="date" /></label>
+            <label>To<input id="historyTo" type="date" /></label>
+            <button id="historySearchBtn" type="button" class="primary-btn">Search History</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </section>
 
-    <script src="/app.js"></script>
-  </body>
+        <section class="card history-panel hidden" id="adminAttendancePanel">
+          <div class="section-head"><h2>Admin: All Attendance</h2><span class="pill">All teachers</span></div>
+          <p class="muted">Admin view of every saved attendance session, including student-wise Present, Absent, and Late status.</p>
+          <div class="history-filters">
+            <label>Teacher<select id="adminTeacher"><option value="">All teachers</option></select></label>
+            <label>Subject<input id="adminSubject" type="text" placeholder="Any subject" /></label>
+            <label>From<input id="adminFrom" type="date" /></label>
+            <label>To<input id="adminTo" type="date" /></label>
+            <button id="adminSearchBtn" type="button" class="primary-btn">Show Attendance</button>
+          </div>
+          <div id="adminAttendanceList" class="history-list"></div>
+        </section>
+      </section>
+
+      <aside class="sidebar right-panel">
+        <section class="card summary-card"><h2>Summary</h2><div id="summaryStats" class="summary-stats"></div></section>
+        <section class="card" id="addStudentPanel">
+          <h2>Add Student</h2>
+          <form id="studentForm" class="stacked-form">
+            <label>Student Name<input id="studentNameInput" type="text" placeholder="Student name" required /></label>
+            <label>Roll Number<input id="studentRollInput" type="text" placeholder="Roll No" required /></label>
+            <label>Class / Section<input id="studentClassInput" type="text" placeholder="BCA-1" required /></label>
+            <button type="submit" class="primary-btn">Add Student</button>
+            <p id="studentMessage" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+      </aside>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
 </html>

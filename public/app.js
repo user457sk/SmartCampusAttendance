@@ -65,7 +65,7 @@
   }
 
   function populateTeacherSelects() {
-    const teacherSelects = ['historyTeacher', 'adminTeacher'];
+    const teacherSelects = ['historyTeacher'];
     const names = Array.from(new Set(state.records.map((record) => String(record.teacher || '').trim()).filter(Boolean)))
       .sort((a, b) => a.localeCompare(b));
 
@@ -167,18 +167,6 @@
     renderRecordCards('historyList', records, 'No history found. Try a different teacher, subject, or date range.');
   }
 
-  function renderAdminAttendance() {
-    const teacherSelect = $('adminTeacher');
-    if (!teacherSelect) return;
-    const records = filterRecords(state.records, {
-      teacher: teacherSelect.value,
-      subject: $('adminSubject') ? $('adminSubject').value.trim() : '',
-      from: $('adminFrom') ? $('adminFrom').value : '',
-      to: $('adminTo') ? $('adminTo').value : ''
-    });
-    renderRecordCards('adminAttendanceList', records, 'No attendance records match the admin filters.');
-  }
-
   function renderCalendar() {
     const title = $('calendarTitle');
     const grid = $('calendarGrid');
@@ -212,7 +200,6 @@
       populateTeacherSelects();
       renderRecordList();
       renderHistory();
-      renderAdminAttendance();
       renderSummary();
       renderCalendar();
     } catch (error) {
@@ -230,10 +217,9 @@
     });
 
     const panelVisibility = [
-      ['adminAttendancePanel', state.role === 'admin'],
-      ['teacherHistoryPanel', state.role !== 'admin'],
-      ['takeAttendancePanel', state.role !== 'admin'],
-      ['addStudentPanel', state.role !== 'admin']
+      ['teacherHistoryPanel', true],
+      ['takeAttendancePanel', true],
+      ['addStudentPanel', true]
     ];
 
     panelVisibility.forEach(([id, visible]) => {
@@ -243,7 +229,6 @@
 
     renderRecordList();
     renderHistory();
-    renderAdminAttendance();
   }
 
   function bindRoleButtons() {
@@ -376,14 +361,9 @@
   }
 
   if ($('historySearchBtn')) $('historySearchBtn').addEventListener('click', renderHistory);
-  if ($('adminSearchBtn')) $('adminSearchBtn').addEventListener('click', renderAdminAttendance);
   ['historyTeacher', 'historySubject', 'historyFrom', 'historyTo'].forEach((id) => {
     const element = $(id);
     if (element) element.addEventListener('change', renderHistory);
-  });
-  ['adminTeacher', 'adminSubject', 'adminFrom', 'adminTo'].forEach((id) => {
-    const element = $(id);
-    if (element) element.addEventListener('change', renderAdminAttendance);
   });
 
   bindRoleButtons();
@@ -392,5 +372,3 @@
   setRole('teacher');
   refreshData();
 })();
-
-

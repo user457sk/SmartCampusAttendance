@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Dashboard – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/student.css" />
+</head>
+<body data-page="dashboard">
+<div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="enroll.html"><span class="ico">📝</span> Subject Enrollment</a>
+            <a href="attendance.html"><span class="ico">📅</span> Attendance History</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Student Dashboard</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">S</span> <span id="userName">student</span></div>
+        </div>
+
+        <div class="content">
+            <!-- Profile card with profile picture manager -->
+            <div class="pct-card" style="margin-bottom:26px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+                <div class="ring" id="ring" style="--val:0">
+                    <span class="ring-val" id="ringVal">0%</span>
+                </div>
+                <div id="profilePicContainer"></div>
+                <div style="flex:1;min-width:200px">
+                    <h2 id="studentName">—</h2>
+                    <p class="muted" id="courseInfo">—</p>
+                    <p style="margin-top:6px"><b>Roll Number:</b> <span id="rollNumber">—</span></p>
+                    <p class="muted" id="overallText" style="margin-top:8px"></p>
+                </div>
+            </div>
+
+            <!-- Stat cards -->
+            <div class="stat-grid">
+                <div class="stat c-primary">
+                    <div class="ico">📚</div>
+                    <div class="val" id="statSubjects">0</div>
+                    <div class="lbl">Total Subjects</div>
+                </div>
+                <div class="stat c-warning">
+                    <div class="ico">🗓️</div>
+                    <div class="val" id="statTotal">0</div>
+                    <div class="lbl">Total Classes</div>
+                </div>
+                <div class="stat c-success">
+                    <div class="ico">✅</div>
+                    <div class="val" id="statAttended">0</div>
+                    <div class="lbl">Classes Attended</div>
+                </div>
+                <div class="stat c-danger">
+                    <div class="ico">❌</div>
+                    <div class="val" id="statAbsent">0</div>
+                    <div class="lbl">Classes Absent</div>
+                </div>
+            </div>
+
+            <!-- Subject Enrollment & Teacher Approval Status -->
+            <div class="panel" style="margin-bottom:26px">
+                <div class="panel-head">
+                    <div>
+                        <h3>My Subject Approvals & Enrollments</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Status of subjects you requested for your branch</p>
+                    </div>
+                    <a class="btn btn-primary btn-sm" href="enroll.html" style="text-decoration:none">Browse Subjects</a>
+                </div>
+                <div class="panel-body" id="enrollmentList">
+                    <p class="muted">Loading enrollments…</p>
+                </div>
+            </div>
+
+            <!-- Subject progress -->
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Attendance by Subject</h3>
+                    <a class="btn btn-ghost btn-sm" href="subject-attendance.html">View Subject Report</a>
+                </div>
+                <div class="panel-body" id="subjectList">
+                    <p class="muted">Loading…</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/student.js"></script>
+</body>
+</html>

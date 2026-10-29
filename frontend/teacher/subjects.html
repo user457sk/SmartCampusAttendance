@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assigned Subjects – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/teacher.css" />
+</head>
+<body data-page="subjects">
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="approvals.html"><span class="ico">📋</span> Enrollment Approvals <span id="navApprovalBadge" style="display:none;background:#f59e0b;color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></a>
+            <a href="subjects.html"><span class="ico">📚</span> Assigned Subjects</a>
+            <a href="mark-attendance.html"><span class="ico">✅</span> Record Attendance</a>
+            <a href="attendance-history.html"><span class="ico">🕘</span> Attendance Reports</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Subject Management</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">T</span> <span id="userName">teacher</span></div>
+        </div>
+
+        <div class="content">
+            <div class="alert" id="alertBox"></div>
+
+            <div class="panel" style="margin-top:0">
+                <div class="panel-head"><h3>Assigned Subjects</h3></div>
+                <div class="panel-body">
+                    <div class="grid grid-3" id="mySubjects"><p class="muted">Loading…</p></div>
+                </div>
+            </div>
+
+            <!-- Manage Subject Students / Enrolled Roster -->
+            <div class="panel" style="margin-top:24px">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <h3>Enrolled Students</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Manage student enrollments for your assigned subjects.</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <label style="font-size:0.85rem;font-weight:600">Subject:</label>
+                        <select class="form-control" id="rosterSubjectSelect" style="max-width:260px"></select>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="alert" id="rosterAlertBox"></div>
+
+                    <!-- Add Student by Roll & Name Form -->
+                    <div style="background:#f8fafc;padding:16px;border-radius:10px;border:1px solid var(--line);margin-bottom:14px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                        <div style="flex:1;min-width:180px">
+                            <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:4px">Student Roll Number *</label>
+                            <input class="form-control" id="addStudentRollInput" placeholder="e.g. CSE-2023-010" style="text-transform:uppercase" required />
+                        </div>
+                        <div style="flex:1;min-width:200px">
+                            <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:4px">Student Full Name (if not registered)</label>
+                            <input class="form-control" id="addStudentNameInput" placeholder="e.g. Rohan Kumar" />
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" id="btnAddStudentByRoll" style="background:#0d9488">
+                                Enroll Student
+                            </button>
+                        </div>
+                    </div>
+                    <p class="muted" style="font-size:0.82rem;margin-top:0;margin-bottom:18px">
+                        <b>Note:</b> Students can be enrolled by roll number and name before registering. Their attendance records will be linked to their account once they register.
+                    </p>
+
+                    <!-- Enrolled Students Table -->
+                    <div id="rosterStudentsTable">
+                        <p class="muted">Loading students roster…</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-2" style="margin-top:24px">
+                <!-- Assign existing subject -->
+                <div class="panel" style="margin-top:0">
+                    <div class="panel-head"><h3>Assign an Existing Subject</h3></div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label>Available subjects</label>
+                            <select class="form-control" id="assignSelect"></select>
+                        </div>
+                        <button class="btn btn-primary" id="assignBtn" style="background:#0d9488">Assign Subject</button>
+                    </div>
+                </div>
+
+                <!-- Create new subject -->
+                <div class="panel" style="margin-top:0">
+                    <div class="panel-head"><h3>Create a Subject</h3></div>
+                    <div class="panel-body">
+                        <form id="newSubjectForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Subject Code</label>
+                                    <input class="form-control" name="subject_code" placeholder="CS303" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>Subject Name</label>
+                                    <input class="form-control" name="subject_name" placeholder="Operating Systems" required />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Course</label>
+                                    <input class="form-control" name="course" placeholder="B.Tech" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>Branch</label>
+                                    <input class="form-control" name="branch" placeholder="CSE" required />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Semester</label>
+                                <input class="form-control" name="semester" type="number" min="1" max="8" value="3" />
+                            </div>
+                            <button class="btn btn-primary" type="submit" style="background:#0d9488">Create and Assign Subject</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/teacher.js"></script>
+</body>
+</html>

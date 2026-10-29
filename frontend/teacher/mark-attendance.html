@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mark Attendance – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/teacher.css" />
+</head>
+<body data-page="mark">
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="approvals.html"><span class="ico">📋</span> Enrollment Approvals <span id="navApprovalBadge" style="display:none;background:#f59e0b;color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></a>
+            <a href="subjects.html"><span class="ico">📚</span> Assigned Subjects</a>
+            <a href="mark-attendance.html"><span class="ico">✅</span> Record Attendance</a>
+            <a href="attendance-history.html"><span class="ico">🕘</span> Attendance Reports</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Mark Attendance</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">T</span> <span id="userName">teacher</span></div>
+        </div>
+
+        <div class="content">
+            <div class="alert" id="alertBox"></div>
+
+            <div class="panel" style="margin-top:0">
+                <div class="panel-head"><h3>Class Attendance</h3></div>
+                <div class="panel-body">
+                    <div class="mark-toolbar">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <select class="form-control" id="subjectSelect"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input class="form-control" type="date" id="dateInput" />
+                        </div>
+                        <button class="btn btn-ghost" id="markAllPresent">Mark All Present</button>
+                        <button class="btn btn-ghost" id="markAllAbsent">Mark All Absent</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Students</h3>
+                    <button class="btn btn-primary" id="saveBtn" style="background:#0d9488">Save Attendance Records</button>
+                </div>
+                <div class="panel-body" id="studentList">
+                    <p class="muted">Choose a subject and date to load students.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/teacher.js"></script>
+</body>
+</html>

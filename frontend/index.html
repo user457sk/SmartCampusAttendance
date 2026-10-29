@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartCampus – Student Attendance Management System</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+    <header class="navbar">
+        <div class="container nav-inner">
+            <a class="brand" href="index.html">
+                <span class="logo">🎓</span> Smart<span>Campus</span>
+            </a>
+            <button class="nav-toggle" onclick="toggleNav()">☰</button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="register.html">Register</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <!-- ================= HERO ================= -->
+    <section class="hero">
+        <div class="container hero-grid">
+            <div>
+                <span class="pill">✨ Digital Attendance Management</span>
+                <h1>Smarter attendance. <span>Clearer insights.</span></h1>
+                <p class="lead">
+                    SmartCampus helps teachers mark attendance in seconds and gives students
+                    instant, transparent access to their attendance percentage — subject-wise,
+                    date-wise and month-wise. No more paper registers.
+                </p>
+                <div class="hero-cta">
+                    <a class="btn btn-primary" href="register.html">Create Your Account</a>
+                    <a class="btn btn-outline" href="login.html">Login</a>
+                </div>
+                <div class="hero-stats">
+                    <div><div class="num">100%</div><div class="lbl">Paperless</div></div>
+                    <div><div class="num">Real-time</div><div class="lbl">Reports</div></div>
+                    <div><div class="num">Secure</div><div class="lbl">Role-based Access</div></div>
+                </div>
+            </div>
+
+            <div class="hero-card">
+                <h3 style="margin-bottom:8px">Attendance Snapshot</h3>
+                <p class="muted" style="font-size:.85rem;margin-bottom:12px">Live subject-wise percentage</p>
+                <div class="row">
+                    <span class="subj">Data Structures</span>
+                    <span class="mini-bar"><i class="p-high" style="width:92%"></i></span>
+                </div>
+                <div class="row">
+                    <span class="subj">Database Systems</span>
+                    <span class="mini-bar"><i class="p-high" style="width:85%"></i></span>
+                </div>
+                <div class="row">
+                    <span class="subj">Operating Systems</span>
+                    <span class="mini-bar"><i class="p-mid" style="width:68%"></i></span>
+                </div>
+                <div class="row">
+                    <span class="subj">Computer Networks</span>
+                    <span class="mini-bar"><i class="p-low" style="width:48%"></i></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= FEATURES ================= -->
+    <section class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>A complete platform for attendance management</h2>
+                <p>A complete system for teachers and students — built with a secure backend and a modern interface.</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="icon">🧑‍🏫</div>
+                    <h3>For Teachers</h3>
+                    <p>Manage your subjects, take attendance for a class in a few clicks, edit records and generate reports instantly.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">🧑‍🎓</div>
+                    <h3>For Students</h3>
+                    <p>View your attendance percentage, subject-wise breakdown, date-wise history and monthly summary anytime.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">📊</div>
+                    <h3>Smart Reports</h3>
+                    <p>Automatic percentage calculation with visual progress bars and colour-coded indicators.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">🔐</div>
+                    <h3>Secure Access</h3>
+                    <p>Hashed passwords, session management and role-based permissions keep every record safe.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">🗂️</div>
+                    <h3>Relational Database</h3>
+                    <p>Proper tables with primary & foreign keys, and duplicate attendance is impossible.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">📱</div>
+                    <h3>Fully Responsive</h3>
+                    <p>Works beautifully on mobile, tablet and desktop with a clean, student-friendly design.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ABOUT ================= -->
+    <section class="section" id="about" style="background:#fff;border-top:1px solid var(--line)">
+        <div class="container" style="max-width:820px;text-align:center">
+            <h2 style="font-size:clamp(1.6rem,3vw,2.2rem)">About SmartCampus</h2>
+            <p class="muted" style="margin-top:16px;font-size:1.05rem">
+                SmartCampus is a Student Attendance Management System designed for colleges and schools.
+                Teachers log in and manage attendance only for the subjects assigned to them, while
+                students get transparent, real-time visibility into their own attendance. The system is
+                built on a beginner-friendly Flask backend with a relational database and a modern,
+                responsive HTML/CSS/JavaScript frontend.
+            </p>
+            <div style="margin-top:26px">
+                <a class="btn btn-primary" href="register.html">Create an Account</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+        <div class="container footer-grid">
+            <div>
+                <div class="brand" style="color:#fff"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+                <p style="margin-top:12px;color:#94a3b8">A modern student attendance management system for a smarter campus.</p>
+            </div>
+            <div>
+                <h4>Quick Links</h4>
+                <a href="index.html">Home</a>
+                <a href="login.html">Login</a>
+                <a href="register.html">Register</a>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <a href="#about">About</a>
+                <a href="register.html">Create an Account</a>
+            </div>
+        </div>
+        <div class="container bottom">© 2025 SmartCampus · Student Attendance Management System</div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

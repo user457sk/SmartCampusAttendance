@@ -1,0 +1,120 @@
+/* ============================================================
+   SmartCampus – teacher dashboard layout
+   Same shell as the student area but with a teal accent.
+   ============================================================ */
+
+:root { --t-accent: #0d9488; --t-accent-dark: #0f766e; --t-accent-light: #ccfbf1; }
+
+.app { display: flex; min-height: 100vh; }
+
+/* ---------------- Sidebar ---------------- */
+.sidebar {
+    width: 250px; background: #0f172a; color: #cbd5e1;
+    padding: 24px 18px; position: fixed; top: 0; bottom: 0; left: 0;
+    display: flex; flex-direction: column; z-index: 200; transition: transform .3s;
+}
+.sidebar .brand { color: #fff; margin-bottom: 30px; }
+.sidebar .brand span { color: #5eead4; }
+.sidebar nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.sidebar nav a {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    border-radius: 11px; color: #94a3b8; font-weight: 600; font-size: .93rem; transition: .2s;
+}
+.sidebar nav a:hover { background: #1e293b; color: #fff; }
+.sidebar nav a.active { background: var(--t-accent); color: #fff; }
+.sidebar nav a .ico { font-size: 1.1rem; width: 22px; text-align: center; }
+.sidebar .logout { margin-top: 10px; }
+.sidebar .logout button {
+    width: 100%; padding: 12px; border: none; border-radius: 11px; cursor: pointer;
+    background: #1e293b; color: #fca5a5; font-weight: 700; font-family: inherit;
+    display: flex; align-items: center; gap: 10px; justify-content: center;
+}
+.sidebar .logout button:hover { background: #334155; }
+
+/* ---------------- Main ---------------- */
+.main { flex: 1; margin-left: 250px; display: flex; flex-direction: column; min-width: 0; }
+.topbar {
+    height: 68px; background: #fff; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 26px; position: sticky; top: 0; z-index: 100;
+}
+.topbar .hamburger { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+.topbar h2 { font-size: 1.15rem; }
+.topbar .user-chip { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: .9rem; }
+.topbar .avatar {
+    width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--t-accent), var(--accent)); color: #fff; font-weight: 800;
+}
+.content { padding: 28px; flex: 1; }
+
+/* ---------------- Stat cards ---------------- */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 26px; }
+.stat {
+    background: #fff; border: 1px solid var(--line); border-radius: 15px;
+    padding: 20px; box-shadow: var(--shadow-sm);
+}
+.stat .ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 1.3rem; margin-bottom: 12px; }
+.stat .val { font-size: 1.9rem; font-weight: 800; line-height: 1; }
+.stat .lbl { color: var(--muted); font-size: .85rem; font-weight: 600; margin-top: 6px; }
+.stat.c-primary .ico { background: var(--t-accent-light); color: var(--t-accent); }
+.stat.c-success .ico { background: var(--success-light); color: var(--success); }
+.stat.c-danger  .ico { background: var(--danger-light);  color: var(--danger); }
+.stat.c-warning .ico { background: #fef3c7; color: var(--warning); }
+
+/* ---------------- Panels ---------------- */
+.panel {
+    background: #fff; border: 1px solid var(--line); border-radius: 15px;
+    box-shadow: var(--shadow-sm); margin-top: 24px; overflow: hidden;
+}
+.panel-head {
+    padding: 18px 22px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.panel-head h3 { font-size: 1.05rem; }
+.panel-body { padding: 22px; }
+
+/* ---------------- Subject cards ---------------- */
+.subject-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 15px; padding: 20px;
+    box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; transition: .2s;
+}
+.subject-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.subject-card .code { font-size: .78rem; font-weight: 800; color: var(--t-accent); letter-spacing: .5px; }
+.subject-card h3 { font-size: 1.05rem; }
+.subject-card .meta { color: var(--muted); font-size: .85rem; }
+.subject-card .actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.subject-card .actions a, .subject-card .actions button {
+    flex: 1; text-align: center; padding: 9px 12px; border-radius: 9px; font-size: .82rem;
+    font-weight: 700; cursor: pointer; border: none; font-family: inherit; text-decoration: none;
+}
+
+/* ---------------- Attendance marking ---------------- */
+.mark-toolbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.mark-toolbar .form-group { margin-bottom: 0; min-width: 200px; flex: 1; }
+.student-row {
+    display: grid; grid-template-columns: 60px 1.5fr 1.5fr auto; gap: 14px; align-items: center;
+    padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; background: #fff;
+}
+.student-row .roll { font-weight: 800; color: var(--muted); font-size: .85rem; }
+.student-row .nm { font-weight: 700; }
+.toggle { display: inline-flex; background: #eef2f7; border-radius: 999px; padding: 4px; gap: 4px; }
+.toggle button {
+    border: none; background: transparent; padding: 8px 18px; border-radius: 999px;
+    font-weight: 700; cursor: pointer; font-family: inherit; font-size: .85rem; color: var(--muted); transition: .2s;
+}
+.toggle button.present.active { background: var(--success); color: #fff; }
+.toggle button.absent.active  { background: var(--danger);  color: #fff; }
+
+/* ---------------- Responsive ---------------- */
+@media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .topbar .hamburger { display: block; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+    .stat-grid { grid-template-columns: 1fr; }
+    .content { padding: 18px; }
+    .student-row { grid-template-columns: 1fr; gap: 8px; }
+}

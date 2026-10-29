@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monthly Attendance – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/student.css" />
+</head>
+<body data-page="monthly">
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="enroll.html"><span class="ico">📝</span> Subject Enrollment</a>
+            <a href="attendance.html"><span class="ico">📅</span> Attendance History</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Monthly Attendance</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">S</span> <span id="userName">student</span></div>
+        </div>
+
+        <div class="content">
+            <div class="panel" style="margin-top:0">
+                <div class="panel-head"><h3>Monthly Summary</h3></div>
+                <div class="table-wrap" style="border:none;border-radius:0">
+                    <table>
+                        <thead>
+                            <tr><th>Month</th><th>Total</th><th>Present</th><th>Absent</th><th>Percentage</th></tr>
+                        </thead>
+                        <tbody id="monthlyBody">
+                            <tr><td colspan="5" class="muted">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/student.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance Reports – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/teacher.css" />
+</head>
+<body data-page="history">
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="approvals.html"><span class="ico">📋</span> Enrollment Approvals <span id="navApprovalBadge" style="display:none;background:#f59e0b;color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></a>
+            <a href="subjects.html"><span class="ico">📚</span> Assigned Subjects</a>
+            <a href="mark-attendance.html"><span class="ico">✅</span> Record Attendance</a>
+            <a href="attendance-history.html"><span class="ico">🕘</span> Attendance Reports</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Attendance Reports</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">T</span> <span id="userName">teacher</span></div>
+        </div>
+
+        <div class="content">
+            <div class="alert" id="historyAlert"></div>
+            <div class="panel" style="margin-top:0">
+                <div class="panel-head">
+                    <h3>Select a Subject</h3>
+                    <select class="form-control" id="subjectSelect" style="width:auto;min-width:240px">
+                        <option value="">Loading subjects…</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Report -->
+            <div class="panel">
+                <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                    <h3>📊 Subject Attendance Summary</h3>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn btn-ghost btn-sm" id="teacherReportExportExcel" disabled>Download Excel</button>
+                        <button class="btn btn-ghost btn-sm" id="teacherReportExportPdf" disabled>Download PDF</button>
+                        <button class="btn btn-ghost btn-sm" id="teacherReportExportCsv" disabled>Download CSV</button>
+                    </div>
+                </div>
+                <div class="table-wrap" style="border:none;border-radius:0">
+                    <table>
+                        <thead>
+                            <tr><th>Roll Number</th><th>Name</th><th>Total Classes</th><th>Present</th><th>Absent</th><th>Attendance Percentage</th></tr>
+                        </thead>
+                        <tbody id="reportBody">
+                            <tr><td colspan="6" class="muted">Select a subject to view the report.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="panel">
+                <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                    <h3>🕘 Attendance History</h3>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <select class="form-control" id="historyView">
+                            <option value="date">By Date</option>
+                            <option value="student">By Student</option>
+                            <option value="roll">By Roll Number</option>
+                        </select>
+                        <input class="form-control" type="date" id="historyDateFilter" aria-label="Filter attendance by date" style="display:none" />
+                        <select class="form-control" id="historyStudentFilter" aria-label="Select student" style="display:none">
+                            <option value="">Choose a student</option>
+                        </select>
+                        <input class="form-control" type="search" id="historyRollFilter" placeholder="Enter exact roll number" aria-label="Search by exact roll number" style="display:none" />
+                        <input class="form-control" type="date" id="historyStartDate" aria-label="Start date" style="display:none" />
+                        <input class="form-control" type="date" id="historyEndDate" aria-label="End date" style="display:none" />
+                        <button class="btn btn-primary" id="historySearch">Apply Filter</button>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px">
+                    <button class="btn btn-ghost btn-sm" id="teacherHistoryExportExcel" disabled>Download Excel</button>
+                    <button class="btn btn-ghost btn-sm" id="teacherHistoryExportPdf" disabled>Download PDF</button>
+                    <button class="btn btn-ghost btn-sm" id="teacherHistoryExportCsv" disabled>Download CSV</button>
+                </div>
+                <div class="table-wrap" style="border:none;border-radius:0">
+                    <table>
+                        <thead>
+                            <tr><th>Date</th><th>Roll Number</th><th>Name</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="historyBody">
+                            <tr><td colspan="4" class="muted">Select a subject to view history.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/attendance-export.js"></script>
+<script src="../js/teacher.js"></script>
+</body>
+</html>

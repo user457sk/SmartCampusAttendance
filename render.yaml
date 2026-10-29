@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: smartcampus
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT wsgi:app
+    healthCheckPath: /health
+    envVars:
+      - key: SMARTCAMPUS_ENV
+        value: production
+      - key: DEBUG
+        value: "0"
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SMARTCAMPUS_SECRET
+        generateValue: true

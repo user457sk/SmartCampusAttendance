@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Approvals – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/teacher.css" />
+</head>
+<body data-page="approvals">
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="approvals.html" class="active"><span class="ico">📋</span> Enrollment Approvals <span id="navApprovalBadge" style="display:none;background:#f59e0b;color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></a>
+            <a href="subjects.html"><span class="ico">📚</span> Assigned Subjects</a>
+            <a href="mark-attendance.html"><span class="ico">✅</span> Record Attendance</a>
+            <a href="attendance-history.html"><span class="ico">🕘</span> Attendance Reports</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Enrollment & Account Approvals</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">T</span> <span id="userName">teacher</span></div>
+        </div>
+
+        <div class="content">
+            <!-- Notice -->
+            <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:16px 20px;margin-bottom:24px">
+                <h3 style="color:#0f766e;margin-bottom:4px;font-size:1.05rem">Instructor Approval Process</h3>
+                <p style="color:#115e59;font-size:0.9rem">
+                    Approve enrollment requests for each subject. Only approved students will appear in the class roster when you record attendance.
+                </p>
+            </div>
+
+            <!-- Direct Add Student Card -->
+            <div class="panel" style="margin-top:0;margin-bottom:20px;border-left:4px solid var(--t-accent)">
+                <div class="panel-head">
+                    <div>
+                        <h3>Enroll Student by Roll Number</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Add a student directly to a subject without a pending enrollment request.</p>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                        <div style="flex:1;min-width:180px">
+                            <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:4px">Subject *</label>
+                            <select class="form-control" id="directAddSubjectSelect"></select>
+                        </div>
+                        <div style="flex:1;min-width:160px">
+                            <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:4px">Student Roll Number *</label>
+                            <input class="form-control" id="directAddRollInput" placeholder="e.g. CSE-2023-010" style="text-transform:uppercase" required />
+                        </div>
+                        <div style="flex:1;min-width:180px">
+                            <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:4px">Student Name (if not registered)</label>
+                            <input class="form-control" id="directAddNameInput" placeholder="e.g. Rohan Kumar" />
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" id="btnDirectAddStudent" style="background:#0d9488">
+                                Enroll Student
+                            </button>
+                        </div>
+                    </div>
+                    <p class="muted" style="font-size:0.82rem;margin-top:10px;margin-bottom:0">
+                        <b>Note:</b> Enter the student's roll number and name to enroll them directly. Attendance records will be linked to their account when they register.
+                    </p>
+                </div>
+            </div>
+
+            <div class="alert" id="alertBox"></div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Student Account Approvals</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Review student registrations before granting sign-in access.</p>
+                    </div>
+                </div>
+                <div class="panel-body" id="studentRegistrationsTable">
+                    <p class="muted">Loading student registrations…</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-sm btn-ghost" id="tabPendingBtn" style="font-weight:700;color:var(--t-accent)">Pending Enrollments</button>
+                        <button class="btn btn-sm btn-ghost" id="tabAllBtn">All Enrollments</button>
+                    </div>
+                    <div>
+                        <input type="text" id="searchInput" placeholder="Search by name, roll number, or subject" class="form-control" style="font-size:0.85rem;padding:6px 14px;width:260px" />
+                    </div>
+                </div>
+
+                <div class="panel-body">
+                    <div id="approvalsTableContainer">
+                        <p class="muted">Loading approval requests…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/teacher.js"></script>
+</body>
+</html>

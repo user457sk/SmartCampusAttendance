@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher Login – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/login.css" />
+    <style>
+        .auth-side { background: linear-gradient(150deg, #0d9488, #0f766e 45%, #06b6d4); }
+        .auth-box h1 { color: #0f766e; }
+    </style>
+</head>
+<body>
+    <div class="auth-wrap">
+        <div class="auth-side">
+            <a class="brand" href="../index.html"><span class="logo">🎓</span> SmartCampus</a>
+            <h2>Teacher Portal 🧑‍🏫</h2>
+            <p>Manage assigned subjects, record attendance, and review reports from one place.</p>
+            <ul>
+                <li><i>✅</i> Mark attendance in seconds</li>
+                <li><i>✅</i> Edit and review past records</li>
+                <li><i>✅</i> Attendance reports by subject and date</li>
+            </ul>
+        </div>
+
+        <div class="auth-main">
+            <div class="auth-box">
+                <div class="logo-mobile"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+                <h1>Teacher Sign in</h1>
+                <p class="sub">Enter your teacher credentials to continue.</p>
+
+                <div class="alert" id="alertBox"></div>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input class="form-control" id="username" name="username" placeholder="e.g. prof.sharma" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input class="form-control" id="password" name="password" type="password" placeholder="••••••••" required />
+                    </div>
+                    <button class="btn btn-primary btn-block" type="submit" style="background:#0d9488">Sign In</button>
+                </form>
+
+                <p class="auth-footer">
+                    New to SmartCampus? <a href="../register.html" style="color:#0d9488">Create an account</a> ·
+                    <a href="../login.html" style="color:#0d9488">Login</a> ·
+                    <a href="../admin/login.html" style="color:#0f172a;font-weight:700">⚡ Admin Login</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/login.js"></script>
+</body>
+</html>

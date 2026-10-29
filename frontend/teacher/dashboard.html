@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher Dashboard – SmartCampus</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/teacher.css" />
+</head>
+<body data-page="dashboard">
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="logo">🎓</span> Smart<span>Campus</span></div>
+        <nav>
+            <a href="dashboard.html"><span class="ico">🏠</span> Dashboard</a>
+            <a href="approvals.html"><span class="ico">📋</span> Enrollment Approvals <span id="navApprovalBadge" style="display:none;background:#f59e0b;color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></a>
+            <a href="subjects.html"><span class="ico">📚</span> Assigned Subjects</a>
+            <a href="mark-attendance.html"><span class="ico">✅</span> Record Attendance</a>
+            <a href="attendance-history.html"><span class="ico">🕘</span> Attendance Reports</a>
+        </nav>
+        <div class="logout"><button onclick="logout()">⎋ Logout</button></div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:14px">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <h2>Teacher Dashboard</h2>
+            </div>
+            <div class="user-chip"><span class="avatar">T</span> <span id="userName">teacher</span></div>
+        </div>
+
+        <div class="content">
+            <div class="pct-card" style="margin-bottom:26px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+                <div id="teacherProfilePicContainer"></div>
+                <div style="flex:1;min-width:200px">
+                    <h2 id="teacherName">—</h2>
+                    <p class="muted" id="deptInfo">—</p>
+                    <p class="muted" id="teacherEmail" style="font-size:0.85rem;margin-top:4px"></p>
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat c-primary">
+                    <div class="ico">📚</div>
+                    <div class="val" id="statSubjects">0</div>
+                    <div class="lbl">Assigned Subjects</div>
+                </div>
+                <div class="stat c-success">
+                    <div class="ico">🧑‍🎓</div>
+                    <div class="val" id="statStudents">0</div>
+                    <div class="lbl">Approved Students</div>
+                </div>
+                <div class="stat c-warning">
+                    <div class="ico">⏳</div>
+                    <div class="val" id="statPendingApprovals">0</div>
+                    <div class="lbl">Pending Approvals</div>
+                </div>
+                <div class="stat c-danger">
+                    <div class="ico">🕘</div>
+                    <div class="val" id="statReportsCount">—</div>
+                    <div class="lbl">Reports</div>
+                </div>
+            </div>
+
+            <!-- Pending Approvals Widget -->
+            <div class="panel" style="margin-top:0;margin-bottom:26px">
+                <div class="panel-head">
+                    <div>
+                        <h3>Pending Student Approvals</h3>
+                        <p class="muted" style="font-size:0.85rem;margin-top:2px">Students requesting enrollment in your assigned subjects</p>
+                    </div>
+                    <a class="btn btn-ghost btn-sm" href="approvals.html">Review Enrollment Requests</a>
+                </div>
+                <div class="panel-body" id="pendingApprovalsList">
+                    <p class="muted">Loading pending requests…</p>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-top:0">
+                <div class="panel-head">
+                    <h3>Assigned Subjects</h3>
+                    <a class="btn btn-ghost btn-sm" href="subjects.html">Manage Subjects</a>
+                </div>
+                <div class="panel-body">
+                    <div class="grid grid-3" id="subjectCards"><p class="muted">Loading…</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/script.js"></script>
+<script src="../js/teacher.js"></script>
+</body>
+</html>
